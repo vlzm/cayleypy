@@ -72,44 +72,18 @@ class CayleyGraph:
             encoded_state_size = self.string_encoder.encoded_length
 
         # Prepare the hash function.
-        self.make_hashes = self.define_make_hashes(encoded_state_size, random_seed)
+        self.make_hashes = self._prepare_hash_function(encoded_state_size, random_seed)
 
-    ################################################################################################################################################################################################################################################################################
-
-    # bit of setup to get the fastest make_hashes - now it's possible always make_hashes_cpu_and_modern_gpu because of using float64 for self.dtype_for_hash
-
-    def define_make_hashes(self, state_size: int, random_seed: Optional[int]) -> Callable[[torch.Tensor], torch.Tensor]:
-        # If states are already encoded by a single int64, use identity function as hash function.
+    def _prepare_hash_function(self,
+                               state_size: int, random_seed: Optional[int]) -> Callable[[torch.Tensor], torch.Tensor]:
         if state_size == 1:
+            # If states are already encoded by a single int64, use identity function as hash function.
             return lambda x: x.reshape(-1)
-
         max_int = int((2 ** 62))
         if random_seed is not None:
             torch.manual_seed(random_seed)
-        self.vec_hasher = torch.randint(-max_int, max_int + 1, size=(state_size,), device=self.device,
-                                        dtype=torch.int64)
-
-        try:
-            # TODO: I don't like this try-catch. At least specify exception type.
-            _ = self.make_hashes_cpu_and_modern_gpu(torch.vstack([self.destination_state,
-                                                                  self.destination_state, ]))
-            return self.make_hashes_cpu_and_modern_gpu
-        except Exception as e:
-            return self.make_hashes_older_gpu
-
-    def make_hashes_cpu_and_modern_gpu(self, states: torch.Tensor, chunk_size_thres=2 ** 18):
-        return states @ self.vec_hasher.mT if states.shape[0] <= chunk_size_thres else torch.hstack(
-            [(z @ self.vec_hasher.reshape((-1, 1))).flatten() for z in
-             torch.tensor_split(states, 8)])
-
-    def make_hashes_older_gpu(self, states: torch.Tensor, chunk_size_thres=2 ** 18):
-        return torch.sum(states * self.vec_hasher, dim=1) if states.shape[0] <= chunk_size_thres else torch.hstack(
-            [torch.sum(z * self.vec_hasher, dim=1) for z in torch.tensor_split(states, 8)])
-        # Compute hashes.
-        # It is same as matrix product torch.matmul(hash_vec , states )
-        # but pay attention: such code work with GPU for integers
-        # While torch.matmul - does not work for GPU for integer data types,
-        # since old GPU hardware (before 2020: P100, T4) does not support integer matrix multiplication
+        vec_hasher = torch.randint(-max_int, max_int + 1, size=(state_size, 1), device=self.device, dtype=torch.int64)
+        return lambda x: (x @ vec_hasher).reshape(-1)
 
     ################################################################################################################################################################################################################################################################################
     def get_unique_states_2(self, states: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:

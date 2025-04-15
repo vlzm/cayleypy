@@ -5,8 +5,6 @@ import gc
 
 import torch
 from typing import Sequence
-import time
-import numpy  as np
 
 
 def inverse_permutation(p: Sequence[int]) -> list[int]:
@@ -17,23 +15,6 @@ def inverse_permutation(p: Sequence[int]) -> list[int]:
     return ans
 
 
-def setup_of_random(seed=None, border=2**32, verbose=0):
-    """
-    Explicit set of random seed. Works for CPU/GPU
-
-    :param seed           : int or None
-    :param border         : int or float
-
-    :return: None, just random seed is set
-    """
-    if seed is None:
-        seed = torch.randint(-border,border+1,(1,)).item()
-    if verbose > 0:
-        print(f'\nRandom seed used for experiments: {seed}\n')
-    torch.manual_seed(seed)
-    return seed
-
-################################################################################################################################################################################################################################################################################
 def free_memory():
     gc.collect()
     torch.cuda.empty_cache()
