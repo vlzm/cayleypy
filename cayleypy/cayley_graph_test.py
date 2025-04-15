@@ -30,8 +30,8 @@ def test_bfs_growth_lrx(bit_encoding: bool):
     for n, expected_layer_sizes, expected_last_layer in test_cases:
         bit_encoding_width = int(math.ceil(math.log2(n))) if bit_encoding else None
         graph = CayleyGraph(prepare_generators("lrx", n=n), bit_encoding_width=bit_encoding_width)
-        start_states = torch.tensor([list(range(n))])
-        result = graph.bfs_growth(start_states)
+        start_state = list(range(n))
+        result = graph.bfs_growth(start_state)
         assert result.layer_sizes == expected_layer_sizes
         assert result.diameter == len(result.layer_sizes)
         assert _last_layer_to_str(result.last_layer) == expected_last_layer
@@ -71,8 +71,8 @@ def test_bfs_growth_lrx_coset(bit_encoding_width):
 
     for n, expected_layer_sizes, expected_last_layer in test_cases:
         graph = CayleyGraph(prepare_generators("lrx", n=n), bit_encoding_width=bit_encoding_width)
-        start_states = torch.tensor([[0] * (n // 2) + [1] * (n // 2)])
-        result = graph.bfs_growth(start_states)
+        start_state = [0] * (n // 2) + [1] * (n // 2)
+        result = graph.bfs_growth(start_state)
         assert result.layer_sizes == expected_layer_sizes
         assert result.diameter == len(result.layer_sizes)
         assert _last_layer_to_str(result.last_layer) == expected_last_layer
@@ -94,8 +94,8 @@ def test_bfs_growth_top_spin_coset(bit_encoding_width):
 
     for n, expected_layer_sizes, expected_last_layer in test_cases:
         graph = CayleyGraph(prepare_generators("top_spin", n=n), bit_encoding_width=bit_encoding_width)
-        start_states = torch.tensor([[0] * (n // 2) + [1] * (n // 2)])
-        result = graph.bfs_growth(start_states)
+        start_state = [0] * (n // 2) + [1] * (n // 2)
+        result = graph.bfs_growth(start_state)
         assert result.layer_sizes == expected_layer_sizes
         assert result.diameter == len(result.layer_sizes)
         assert _last_layer_to_str(result.last_layer) == expected_last_layer

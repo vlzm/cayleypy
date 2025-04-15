@@ -117,7 +117,12 @@ class CayleyGraph:
 
         return states[IX1], hashed[IX1], IX1
 
-    def _encode_states(self, states: torch.Tensor) -> torch.Tensor:
+    def _encode_states(self, states: torch.Tensor | np.ndarray | list) -> torch.Tensor:
+        states = torch.as_tensor(states, device=self.device)
+        if len(states.shape) == 1:  # In case when only one state was passed.
+            states = states.reshape(1, -1)
+        assert len(states.shape) == 2
+        assert states.shape[1] == self.state_size
         if self.string_encoder is not None:
             return self.string_encoder.encode(states)
         return states
@@ -133,7 +138,7 @@ class CayleyGraph:
         return get_neighbors2(states, self.generators)
 
     def bfs_growth(self,
-                   start_states: torch.Tensor,
+                   start_states: torch.Tensor | np.ndarray | list,
                    max_layers: int = 1000000000) -> BfsGrowthResult:
         """Finds distance from given set of states to all other reachable states."""
         assert self.generators_inverse_closed, "BFS is supported only when generators are inverse-closed."
