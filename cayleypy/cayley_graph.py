@@ -34,12 +34,15 @@ class CayleyGraph:
             *,
             device: str = 'auto',
             random_seed: Optional[int] = None,
-            bit_encoding_width: Optional[int] = None):
+            bit_encoding_width: Optional[int] = None,
+            verbose: int = 0):
         # Pick device. It will be used to store all tensors.
+        assert device in ["auto", "cpu", "cuda"]
         if device == "auto":
             device = "cuda" if torch.cuda.is_available() else "cpu"
-        assert device in ["cpu", "gpu"]
         self.device = torch.device(device)
+        if verbose > 0:
+            print(f"Using device: {self.device}.")
 
         # Prepare generators.
         if isinstance(generators, list):
@@ -71,8 +74,8 @@ class CayleyGraph:
             self.encoded_generators = [self.string_encoder.implement_permutation(perm) for perm in generators]
             encoded_state_size = self.string_encoder.encoded_length
 
-        # Prepare the hash function.
         self.make_hashes = self._prepare_hash_function(encoded_state_size, random_seed)
+        self.verbose = verbose
 
     def _prepare_hash_function(self,
                                state_size: int, random_seed: Optional[int]) -> Callable[[torch.Tensor], torch.Tensor]:
