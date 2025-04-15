@@ -2,7 +2,6 @@ import math
 import os
 
 import pytest
-import scipy
 import torch
 
 from cayleypy import CayleyGraph, prepare_generators
@@ -35,7 +34,6 @@ def test_bfs_growth_lrx(bit_encoding: bool):
         result = graph.bfs_growth(start_states)
         assert result.layer_sizes == expected_layer_sizes
         assert result.diameter == len(result.layer_sizes)
-        assert sum(result.layer_sizes) == scipy.special.factorial(n, exact=True)
         assert _last_layer_to_str(result.last_layer) == expected_last_layer
 
 
@@ -77,7 +75,6 @@ def test_bfs_growth_lrx_coset(bit_encoding_width):
         result = graph.bfs_growth(start_states)
         assert result.layer_sizes == expected_layer_sizes
         assert result.diameter == len(result.layer_sizes)
-        assert sum(result.layer_sizes) == scipy.special.comb(n, n // 2, exact=True)
         assert _last_layer_to_str(result.last_layer) == expected_last_layer
 
 
@@ -101,8 +98,6 @@ def test_bfs_growth_top_spin_coset(bit_encoding_width):
         result = graph.bfs_growth(start_states)
         assert result.layer_sizes == expected_layer_sizes
         assert result.diameter == len(result.layer_sizes)
-        if n >= 6:
-            assert sum(result.layer_sizes) == scipy.special.comb(n, n // 2, exact=True)
         assert _last_layer_to_str(result.last_layer) == expected_last_layer
 
 
