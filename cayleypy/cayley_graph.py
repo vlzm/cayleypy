@@ -1,10 +1,10 @@
 import torch
 import time
-import numpy  as np
+import numpy as np
 from dataclasses import dataclass
 from typing import Callable, Optional
 
-from .utils     import *
+from .utils import *
 from .string_encoder import StringEncoder
 
 
@@ -13,6 +13,7 @@ class BfsGrowthResult:
     layer_sizes: list[int]  # i-th element is number of states at distance i from start.
     diameter: int  # Maximal distance from start to some state (=len(layer_sizes)).
     last_layer: torch.Tensor  # States at maximal distance from start.
+
 
 class CayleyGraph:
     """
@@ -23,47 +24,53 @@ class CayleyGraph:
         bit_encoding_width - if set, specifies that coset elements must be encoded in memory-efficient way, using this
           much bits per element.
     """
-    ################################################################################################################################################################################################################################################################################
-    def __init__(self,
-                 generators                ,
-                 device      : str      = 'auto',
-                 random_seed    : Optional[int]   = None,
-                 bit_encoding_width : Optional[int] = None):
 
-        # It's better for speed to store all data in the same device
+    ################################################################################################################################################################################################################################################################################
+    def __init__(
+            self,
+            generators: list[list[int]] | torch.Tensor | np.ndarray,
+            *,
+            device: str = 'auto',
+            random_seed: Optional[int] = None,
+            bit_encoding_width: Optional[int] = None):
+        # Pick device. It will be used to store all tensors.
         if device == "auto":
             device = "cuda" if torch.cuda.is_available() else "cpu"
         assert device in ["cpu", "gpu"]
         self.device = torch.device(device)
 
-        # generators as a list
+        # Prepare generators.
         if isinstance(generators, list):
-            self.list_generators = generators
-        elif isinstance(generators, torch.Tensor ):
-            self.list_generators = [[q.item() for q in generators[i,:]] for i in range(generators.shape[0] ) ]
-        elif isinstance(generators, np.ndarray ):
-            self.list_generators = [list(generators[i,:]) for i in range(generators.shape[0] ) ]
+            generators_list = generators
+        elif isinstance(generators, torch.Tensor):
+            generators_list = [[q.item() for q in generators[i, :]] for i in range(generators.shape[0])]
+        elif isinstance(generators, np.ndarray):
+            generators_list = [list(generators[i, :]) for i in range(generators.shape[0])]
         else:
-            print('Unsupported format for "generators"', type(generators), generators)
-            raise ValueError('Unsupported format for "generators" ' + str(type(generators)) )
+            raise ValueError('Unsupported format for "generators" ' + str(type(generators)))
+        self.generators = torch.tensor(generators_list, dtype=torch.int64, device=self.device)
 
-        self.state_size        = len(self.list_generators[0])
-        self.n_generators      = len(self.list_generators   )
+        # Validate generators.
+        self.state_size = len(generators_list[0])
+        self.n_generators = len(generators_list)
+        generators_set = set(tuple(perm) for perm in generators_list)
+        id_perm = list(range(self.state_size))
+        self.generators_inverse_closed = True
+        for perm in generators_list:
+            assert sorted(perm) == id_perm, f"{perm} is not a permutation of length {self.state_size}."
+            if tuple(inverse_permutation(perm)) not in generators_set:
+                self.generators_inverse_closed = False
 
-
-        # generators as a tensor
-        self.tensor_generators = torch.tensor(self.list_generators, device = self.device, dtype = torch.int64)
-
-        self.string_encoder : Optional[StringEncoder] = None
+        # Prepare encoder in case we want to encode states using few bits per element.
+        self.string_encoder: Optional[StringEncoder] = None
         encoded_state_size: int = self.state_size
         if bit_encoding_width is not None:
-            self.string_encoder = StringEncoder(code_width = bit_encoding_width, n =self.state_size)
+            self.string_encoder = StringEncoder(code_width=bit_encoding_width, n=self.state_size)
             self.encoded_generators = [self.string_encoder.implement_permutation(perm) for perm in generators]
             encoded_state_size = self.string_encoder.encoded_length
 
-
-        self.define_make_hashes(encoded_state_size, random_seed)
-
+        # Prepare the hash function.
+        self.make_hashes = self.define_make_hashes(encoded_state_size, random_seed)
 
     ################################################################################################################################################################################################################################################################################
 
@@ -72,33 +79,37 @@ class CayleyGraph:
     def define_make_hashes(self, state_size: int, random_seed: Optional[int]) -> Callable[[torch.Tensor], torch.Tensor]:
         # If states are already encoded by a single int64, use identity function as hash function.
         if state_size == 1:
-            self.make_hashes = lambda x: x.reshape(-1)
+            return lambda x: x.reshape(-1)
 
         max_int = int((2 ** 62))
         if random_seed is not None:
             torch.manual_seed(random_seed)
-        self.vec_hasher = torch.randint(-max_int, max_int + 1, size=(state_size,), device=self.device,  dtype=torch.int64)
+        self.vec_hasher = torch.randint(-max_int, max_int + 1, size=(state_size,), device=self.device,
+                                        dtype=torch.int64)
 
         try:
-            _ = self.make_hashes_cpu_and_modern_gpu( torch.vstack([self.state_destination,
-                                                                   self.state_destination,]) )
-            self.make_hashes = self.make_hashes_cpu_and_modern_gpu
+            _ = self.make_hashes_cpu_and_modern_gpu(torch.vstack([self.state_destination,
+                                                                  self.state_destination, ]))
+            return self.make_hashes_cpu_and_modern_gpu
         except Exception as e:
-            self.make_hashes = self.make_hashes_older_gpu
+            return self.make_hashes_older_gpu
 
-    def make_hashes_cpu_and_modern_gpu(self, states: torch.Tensor, chunk_size_thres=2**18):
-        return states @ self.vec_hasher.mT if states.shape[0]<=chunk_size_thres else torch.hstack([(z.to(self.dtype_for_hash) @ self.vec_hasher.reshape((-1,1))).flatten() for z in torch.tensor_split(states,8)])
+    def make_hashes_cpu_and_modern_gpu(self, states: torch.Tensor, chunk_size_thres=2 ** 18):
+        return states @ self.vec_hasher.mT if states.shape[0] <= chunk_size_thres else torch.hstack(
+            [(z.to(self.dtype_for_hash) @ self.vec_hasher.reshape((-1, 1))).flatten() for z in
+             torch.tensor_split(states, 8)])
 
-    def make_hashes_older_gpu(self, states: torch.Tensor, chunk_size_thres=2**18):
-        return torch.sum( states * self.vec_hasher, dim=1) if states.shape[0]<=chunk_size_thres else torch.hstack([torch.sum( z * self.vec_hasher, dim=1) for z in torch.tensor_split(states,8)])
-                                                            # Compute hashes.
-                                                            # It is same as matrix product torch.matmul(hash_vec , states )
-                                                            # but pay attention: such code work with GPU for integers
-                                                            # While torch.matmul - does not work for GPU for integer data types,
-                                                            # since old GPU hardware (before 2020: P100, T4) does not support integer matrix multiplication
+    def make_hashes_older_gpu(self, states: torch.Tensor, chunk_size_thres=2 ** 18):
+        return torch.sum(states * self.vec_hasher, dim=1) if states.shape[0] <= chunk_size_thres else torch.hstack(
+            [torch.sum(z * self.vec_hasher, dim=1) for z in torch.tensor_split(states, 8)])
+        # Compute hashes.
+        # It is same as matrix product torch.matmul(hash_vec , states )
+        # but pay attention: such code work with GPU for integers
+        # While torch.matmul - does not work for GPU for integer data types,
+        # since old GPU hardware (before 2020: P100, T4) does not support integer matrix multiplication
 
     ################################################################################################################################################################################################################################################################################
-    def get_unique_states_2( self, states: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def get_unique_states_2(self, states: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         '''
         Return matrix with unique rows for input matrix "states" 
         I.e. duplicate rows are dropped.
@@ -127,7 +138,6 @@ class CayleyGraph:
 
         return states[IX1], hashed[IX1], IX1
 
-
     ##### Code below is for BFS and calculating growth function.
     def _encode_states(self, states: torch.Tensor) -> torch.Tensor:
         if self.string_encoder is not None:
@@ -140,16 +150,18 @@ class CayleyGraph:
         return states
 
     def _get_neighbors(self, states: torch.Tensor) -> torch.Tensor:
-       if self.string_encoder is not None:
-           return torch.vstack([f(states) for f in self.encoded_generators])
-       return get_neighbors2(states, self.tensor_generators)
+        if self.string_encoder is not None:
+            return torch.vstack([f(states) for f in self.encoded_generators])
+        return get_neighbors2(states, self.generators)
 
     def bfs_growth(self,
                    start_states: torch.Tensor,
-                   max_layers : int = 1000000000) -> BfsGrowthResult:
+                   max_layers: int = 1000000000) -> BfsGrowthResult:
         """Finds distance from given set of states to all other reachable states."""
+        assert self.generators_inverse_closed, "BFS is supported only when generators are inverse-closed."
+
         start_states = self._encode_states(start_states)
-        layer0_hashes =  torch.empty( (0,), dtype=torch.int64 )
+        layer0_hashes = torch.empty((0,), dtype=torch.int64)
         layer1, layer1_hashes, _ = self.get_unique_states_2(start_states)
         layer_sizes = [len(layer1)]
 
@@ -173,4 +185,3 @@ class CayleyGraph:
         return BfsGrowthResult(layer_sizes=layer_sizes,
                                diameter=len(layer_sizes),
                                last_layer=self._decode_states(layer1))
-

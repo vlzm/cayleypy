@@ -1,6 +1,7 @@
 import math
 from typing import Callable, Sequence
 
+import numpy as np
 import torch
 
 # We are using int64, but avoid using the sign bit.
@@ -58,10 +59,10 @@ class StringEncoder:
             orig[:, i // w] |= ((encoded[:, i // cl] >> (i % cl)) & 1) << (i % w)
         return orig
 
-    def implement_permutation(self, p: Sequence[int]) -> Callable[[torch.Tensor], torch.Tensor]:
+    def implement_permutation(self, p: Sequence[int] | np.ndarray) -> Callable[[torch.Tensor], torch.Tensor]:
         """Converts permutation to a function on encoded tensor implementing this permutation."""
         assert len(p) == self.n
-        shift_to_mask: dict[tuple[int, int, int], float] = dict()
+        shift_to_mask: dict[tuple[int, int, int], int] = dict()
         for i in range(self.n):
             for j in range(self.w):
                 start_bit = p[i] * self.w + j
@@ -84,6 +85,6 @@ class StringEncoder:
             lines.append(line)
         lines += [" return ans"]
         src = "\n".join(lines)
-        l = {}
+        l : dict = {}
         exec(src, {"torch": torch}, l)
         return l["f_"]

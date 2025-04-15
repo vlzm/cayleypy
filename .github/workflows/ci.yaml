@@ -20,6 +20,8 @@ jobs:
         run: pip install pycodestyle==2.11.0
       - name: Check style
         run: pycodestyle --max-line-length=120 ./cayleypy
+      - name: Check typing
+        run: mypy ./cayleypy
   pytest-ubuntu:
     strategy:
       matrix:
