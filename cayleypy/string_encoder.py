@@ -62,7 +62,7 @@ class StringEncoder:
     def implement_permutation(self, p: Sequence[int] | np.ndarray) -> Callable[[torch.Tensor], torch.Tensor]:
         """Converts permutation to a function on encoded tensor implementing this permutation."""
         assert len(p) == self.n
-        shift_to_mask: dict[tuple[int, int, int], int] = dict()
+        shift_to_mask: dict[tuple[int, int, int], np.int64] = dict()
         for i in range(self.n):
             for j in range(self.w):
                 start_bit = p[i] * self.w + j
