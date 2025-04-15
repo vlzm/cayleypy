@@ -133,7 +133,7 @@ class CayleyGraph:
         assert self.generators_inverse_closed, "BFS is supported only when generators are inverse-closed."
 
         start_states = self._encode_states(start_states)
-        layer0_hashes = torch.empty((0,), dtype=torch.int64)
+        layer0_hashes = torch.empty((0,), dtype=torch.int64, device=self.device)
         layer1, layer1_hashes, _ = self.get_unique_states_2(start_states)
         layer_sizes = [len(layer1)]
 

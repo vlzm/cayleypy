@@ -22,12 +22,9 @@ class StateHasher:
             trial_states = torch.zeros((2, state_size), device=device, dtype=torch.int64)
             _ = self._make_hashes_cpu_and_modern_gpu(trial_states)
             self.make_hashes = self._make_hashes_cpu_and_modern_gpu
-            print("Using hash function of type 1")
         except RuntimeError as e:
             self.vec_hasher = self.vec_hasher.reshape((state_size,))
-            print("ERROR", e)
             self.make_hashes = self._make_hashes_older_gpu
-            print("Using hash function of type 2")
 
     def _make_hashes_cpu_and_modern_gpu(self, states: torch.Tensor) -> torch.Tensor:
         return (states @ self.vec_hasher).reshape(-1)
