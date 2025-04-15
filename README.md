@@ -30,7 +30,8 @@ pip install -r requirements-dev.txt
 
 Before commiting, run these checks:
 ```
-pycodestyle --max-line-length=120 ./cayleypy 
+pycodestyle --max-line-length=120 ./cayleypy
+mypy ./cayleypy
 pytest 
 ```
 

@@ -27,7 +27,6 @@ class CayleyGraph:
           much bits per element.
     """
 
-    ################################################################################################################################################################################################################################################################################
     def __init__(
             self,
             generators: list[list[int]] | torch.Tensor | np.ndarray,
@@ -88,19 +87,19 @@ class CayleyGraph:
         vec_hasher = torch.randint(-max_int, max_int + 1, size=(state_size, 1), device=self.device, dtype=torch.int64)
         return lambda x: (x @ vec_hasher).reshape(-1)
 
-    ################################################################################################################################################################################################################################################################################
     def get_unique_states_2(self, states: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         '''
-        Return matrix with unique rows for input matrix "states" 
+        Return matrix with unique rows for input matrix "states"
         I.e. duplicate rows are dropped.
         For fast implementation: we use hashing via scalar/dot product.
-        Note: output order of rows is different from the original. 
+        Note: output order of rows is different from the original.
         '''
-        # Note: that implementation is 30 times faster than torch.unique(states, dim = 0) - because we use hashes  (see K.Khoruzhii: https://t.me/sberlogasci/10989/15920)
-        # Note: torch.unique does not support returning of indices of unique element so we cannot use it 
-        # That is in contrast to numpy.unique which supports - set: return_index = True 
+        # Note: that implementation is 30 times faster than torch.unique(states, dim = 0) - because we use hashes
+        # (see K.Khoruzhii: https://t.me/sberlogasci/10989/15920)
+        # Note: torch.unique does not support returning of indices of unique element so we cannot use it
+        # That is in contrast to numpy.unique which supports - set: return_index = True
 
-        # Hashing rows of states matrix: 
+        # Hashing rows of states matrix:
         hashed = self.make_hashes(states)
 
         # sort
@@ -118,7 +117,6 @@ class CayleyGraph:
 
         return states[IX1], hashed[IX1], IX1
 
-    ##### Code below is for BFS and calculating growth function.
     def _encode_states(self, states: torch.Tensor) -> torch.Tensor:
         if self.string_encoder is not None:
             return self.string_encoder.encode(states)

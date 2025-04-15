@@ -85,6 +85,6 @@ class StringEncoder:
             lines.append(line)
         lines += [" return ans"]
         src = "\n".join(lines)
-        l : dict = {}
+        l: dict = {}
         exec(src, {"torch": torch}, l)
         return l["f_"]

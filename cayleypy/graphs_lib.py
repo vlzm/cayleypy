@@ -1,4 +1,3 @@
-
 # TODO: adds Rubik's cubes etc.; support specifying initial state.
 
 def prepare_generators(name, n=0) -> list[list[int]]:
@@ -13,7 +12,7 @@ def prepare_generators(name, n=0) -> list[list[int]]:
         "top_spin" - shift left, shift right, reverse first four elements (n>=4).
     """
     if name == "lrx":
-        assert n>=2
+        assert n >= 2
         return [list(range(1, n)) + [0], [n - 1] + list(range(0, n - 1)), [1, 0] + list(range(2, n))]
     elif name == "top_spin":
         assert n >= 4

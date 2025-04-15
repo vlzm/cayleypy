@@ -106,7 +106,7 @@ def test_bfs_growth_top_spin_coset(bit_encoding_width):
         assert _last_layer_to_str(result.last_layer) == expected_last_layer
 
 
-### Below is the benchmark code. To tun: `BENCHMARK=1 pytest . -k benchmark`
+# Below is the benchmark code. To tun: `BENCHMARK=1 pytest . -k benchmark`
 BENCHMARK_RUN = os.getenv("BENCHMARK") == "1"
 
 
