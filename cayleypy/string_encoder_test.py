@@ -3,7 +3,6 @@ import math
 import numpy as np
 import pytest
 import torch
-from triton.language import dtype
 
 from .string_encoder import StringEncoder
 
