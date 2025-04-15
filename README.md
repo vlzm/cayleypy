@@ -10,6 +10,7 @@ and [Caley graphs](https://en.wikipedia.org/wiki/Cayley_graph).
 This what we plan to support:
 * BFS from given state (growth function, adjacency matrix, last layers).
 * Efficient path finding (beam search).
+* Random walk generation.
 * Library of graphs and generators (LRX, TopSpin, Rubik Cubes, wreath, globe etc., 
     see [here](https://www.kaggle.com/code/ivankolt/generation-of-incidence-mtx-pancake)).
 * Efficient computing on CPU, GPU, TPU (with JAX), usable on Kaggle.
@@ -37,7 +38,7 @@ pytest
 ## Credits
 
 The initial code for this library is based on [cayleypy](https://github.com/iKolt/cayleypy)
-by [Ivan Koltsov](), which is itself based on code by 
+by [Ivan Koltsov](https://github.com/iKolt), which is itself based on code by 
 [Alexander Chervov](https://github.com/chervov) and 
 [Kirill Khoruzhii](https://github.com/k1242).
 
