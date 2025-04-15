@@ -1,8 +1,39 @@
 """Helper functions."""
 import gc
-from typing import Sequence
+from typing import Callable, Optional, Sequence
 
 import torch
+
+
+class StateHasher:
+    def __init__(self, state_size: int, random_seed: Optional[int], device: torch.device):
+        # If states are already encoded by a single int64, use identity function as hash function.
+        self.make_hashes: Callable[[torch.Tensor], torch.Tensor] = lambda x: x.reshape(-1)
+        self.state_size = state_size
+        if state_size == 1:
+            return
+
+        if random_seed is not None:
+            torch.manual_seed(random_seed)
+        max_int = int((2 ** 62))
+        self.vec_hasher = torch.randint(-max_int, max_int + 1, size=(state_size, 1), device=device, dtype=torch.int64)
+
+        try:
+            trial_states = torch.zeros((2, state_size), device=device, dtype=torch.int64)
+            _ = self._make_hashes_cpu_and_modern_gpu(trial_states)
+            self.make_hashes = self._make_hashes_cpu_and_modern_gpu
+            print("Using hash function of type 1")
+        except RuntimeError as e:
+            self.vec_hasher = self.vec_hasher.reshape((state_size,))
+            print("ERROR", e)
+            self.make_hashes = self._make_hashes_older_gpu
+            print("Using hash function of type 2")
+
+    def _make_hashes_cpu_and_modern_gpu(self, states: torch.Tensor) -> torch.Tensor:
+        return (states @ self.vec_hasher).reshape(-1)
+
+    def _make_hashes_older_gpu(self, states: torch.Tensor) -> torch.Tensor:
+        return torch.sum(states * self.vec_hasher, dim=1)
 
 
 def inverse_permutation(p: Sequence[int]) -> list[int]:

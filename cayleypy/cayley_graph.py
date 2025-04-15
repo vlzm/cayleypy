@@ -73,19 +73,8 @@ class CayleyGraph:
             self.encoded_generators = [self.string_encoder.implement_permutation(perm) for perm in generators]
             encoded_state_size = self.string_encoder.encoded_length
 
-        self.make_hashes = self._prepare_hash_function(encoded_state_size, random_seed)
+        self.hasher = StateHasher(encoded_state_size, random_seed, self.device)
         self.verbose = verbose
-
-    def _prepare_hash_function(self,
-                               state_size: int, random_seed: Optional[int]) -> Callable[[torch.Tensor], torch.Tensor]:
-        if state_size == 1:
-            # If states are already encoded by a single int64, use identity function as hash function.
-            return lambda x: x.reshape(-1)
-        max_int = int((2 ** 62))
-        if random_seed is not None:
-            torch.manual_seed(random_seed)
-        vec_hasher = torch.randint(-max_int, max_int + 1, size=(state_size, 1), device=self.device, dtype=torch.int64)
-        return lambda x: (x @ vec_hasher).reshape(-1)
 
     def get_unique_states_2(self, states: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         '''
@@ -100,7 +89,7 @@ class CayleyGraph:
         # That is in contrast to numpy.unique which supports - set: return_index = True
 
         # Hashing rows of states matrix:
-        hashed = self.make_hashes(states)
+        hashed = self.hasher.make_hashes(states)
 
         # sort
         hashed_sorted, idx = torch.sort(hashed, stable=True)
