@@ -42,7 +42,7 @@ class StringEncoder:
         max_value = torch.max(s)
         assert max_value < 2 ** self.w, f"Width {self.w} is not sufficient to encode value {max_value}."
 
-        encoded = torch.zeros((s.shape[0], self.encoded_length), dtype=torch.int64)
+        encoded = torch.zeros((s.shape[0], self.encoded_length), dtype=torch.int64, device=s.device)
         w, cl = self.w, CODEWORD_LENGTH
         for i in range(w * self.n):
             encoded[:, i // cl] |= ((s[:, i // w] >> (i % w)) & 1) << (i % cl)
@@ -53,7 +53,7 @@ class StringEncoder:
 
         Input shape `(m, self.encoded_length)`. Output shape `(m, self.n)`.
         """
-        orig = torch.zeros((encoded.shape[0], self.n), dtype=torch.int64)
+        orig = torch.zeros((encoded.shape[0], self.n), dtype=torch.int64, device=encoded.device)
         w, cl = self.w, CODEWORD_LENGTH
         for i in range(w * self.n):
             orig[:, i // w] |= ((encoded[:, i // cl] >> (i % cl)) & 1) << (i % w)
