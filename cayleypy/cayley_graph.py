@@ -17,10 +17,12 @@ class BfsGrowthResult:
 
 class CayleyGraph:
     """
+    TODO: rewrite this comment.
     class to encapsulate all of permutation group in one place
     must help keeping reproducibility and dev speed
 
     Args:
+        TODO: all args.
         bit_encoding_width - if set, specifies that coset elements must be encoded in memory-efficient way, using this
           much bits per element.
     """
@@ -88,15 +90,16 @@ class CayleyGraph:
                                         dtype=torch.int64)
 
         try:
-            _ = self.make_hashes_cpu_and_modern_gpu(torch.vstack([self.state_destination,
-                                                                  self.state_destination, ]))
+            # TODO: I don't like this try-catch. At least specify exception type.
+            _ = self.make_hashes_cpu_and_modern_gpu(torch.vstack([self.destination_state,
+                                                                  self.destination_state, ]))
             return self.make_hashes_cpu_and_modern_gpu
         except Exception as e:
             return self.make_hashes_older_gpu
 
     def make_hashes_cpu_and_modern_gpu(self, states: torch.Tensor, chunk_size_thres=2 ** 18):
         return states @ self.vec_hasher.mT if states.shape[0] <= chunk_size_thres else torch.hstack(
-            [(z.to(self.dtype_for_hash) @ self.vec_hasher.reshape((-1, 1))).flatten() for z in
+            [(z @ self.vec_hasher.reshape((-1, 1))).flatten() for z in
              torch.tensor_split(states, 8)])
 
     def make_hashes_older_gpu(self, states: torch.Tensor, chunk_size_thres=2 ** 18):

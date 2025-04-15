@@ -5,16 +5,11 @@ import pytest
 import scipy
 import torch
 
-from cayleypy import CayleyGraph
+from cayleypy import CayleyGraph, prepare_generators
 
 
 def _last_layer_to_str(layer):
     return set(''.join(str(int(x)) for x in state) for state in layer)
-
-
-def _lrx_permutations(n):
-    """Generates 3 permutations from S_N: left shift, right shift and swapping first two elements."""
-    return [list(range(1, n)) + [0], [n - 1] + list(range(0, n - 1)), [1, 0] + list(range(2, n))]
 
 
 @pytest.mark.parametrize("bit_encoding", [False, True])
@@ -35,7 +30,7 @@ def test_bfs_growth_lrx(bit_encoding: bool):
 
     for n, expected_layer_sizes, expected_last_layer in test_cases:
         bit_encoding_width = int(math.ceil(math.log2(n))) if bit_encoding else None
-        graph = CayleyGraph(_lrx_permutations(n), bit_encoding_width=bit_encoding_width)
+        graph = CayleyGraph(prepare_generators("lrx", n=n), bit_encoding_width=bit_encoding_width)
         start_states = torch.tensor([list(range(n))])
         result = graph.bfs_growth(start_states)
         assert result.layer_sizes == expected_layer_sizes
@@ -47,11 +42,12 @@ def test_bfs_growth_lrx(bit_encoding: bool):
 def test_bfs_growth_lrx_n40():
     n = 40
     start_states = torch.tensor([list(range(n))])
-    graph1 = CayleyGraph(_lrx_permutations(n), bit_encoding_width=None)
+    generators = prepare_generators("lrx", n=n)
+    graph1 = CayleyGraph(generators, bit_encoding_width=None)
     result1 = graph1.bfs_growth(start_states, max_layers=5)
     # We need 6*40=240 bits for encoding, so each states is encoded by four int64's.
     # This test verifies that first 5 layers are computed correctly when using bit encoding.
-    graph2 = CayleyGraph(_lrx_permutations(n), bit_encoding_width=6)
+    graph2 = CayleyGraph(generators, bit_encoding_width=6)
     result2 = graph2.bfs_growth(start_states, max_layers=5)
     assert result1.layer_sizes == result2.layer_sizes
 
@@ -76,18 +72,13 @@ def test_bfs_growth_lrx_coset(bit_encoding_width):
     ]
 
     for n, expected_layer_sizes, expected_last_layer in test_cases:
-        graph = CayleyGraph(_lrx_permutations(n), bit_encoding_width=bit_encoding_width)
+        graph = CayleyGraph(prepare_generators("lrx", n=n), bit_encoding_width=bit_encoding_width)
         start_states = torch.tensor([[0] * (n // 2) + [1] * (n // 2)])
         result = graph.bfs_growth(start_states)
         assert result.layer_sizes == expected_layer_sizes
         assert result.diameter == len(result.layer_sizes)
         assert sum(result.layer_sizes) == scipy.special.comb(n, n // 2, exact=True)
         assert _last_layer_to_str(result.last_layer) == expected_last_layer
-
-
-def _top_spin_permutations(n):
-    """Generates 3 permutations from S_N: left shift, right shift and reversing first 4 elements."""
-    return [list(range(1, n)) + [0], [n - 1] + list(range(0, n - 1)), [3, 2, 1, 0] + list(range(4, n))]
 
 
 @pytest.mark.parametrize("bit_encoding_width", [None, 1])
@@ -105,7 +96,7 @@ def test_bfs_growth_top_spin_coset(bit_encoding_width):
     ]
 
     for n, expected_layer_sizes, expected_last_layer in test_cases:
-        graph = CayleyGraph(_top_spin_permutations(n), bit_encoding_width=bit_encoding_width)
+        graph = CayleyGraph(prepare_generators("top_spin", n=n), bit_encoding_width=bit_encoding_width)
         start_states = torch.tensor([[0] * (n // 2) + [1] * (n // 2)])
         result = graph.bfs_growth(start_states)
         assert result.layer_sizes == expected_layer_sizes
@@ -125,5 +116,5 @@ BENCHMARK_RUN = os.getenv("BENCHMARK") == "1"
 def test_benchmark_top_spin(benchmark, benchmark_mode, n):
     start_states = torch.tensor([[0] * (n // 2) + [1] * (n // 2)])
     bit_encoding_width = 1 if benchmark_mode == "bit_encoded" else None
-    graph = CayleyGraph(_lrx_permutations(n), bit_encoding_width=bit_encoding_width)
+    graph = CayleyGraph(prepare_generators("lrx", n=n), bit_encoding_width=bit_encoding_width)
     benchmark(lambda: graph.bfs_growth(start_states))
