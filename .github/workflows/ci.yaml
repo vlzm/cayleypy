@@ -7,8 +7,8 @@ on:
     branches: [ main ]
 
 jobs:
-  style-typing-check:
-    name: Style and typing check
+  style-check:
+    name: Style check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
@@ -17,11 +17,9 @@ jobs:
           python-version: '3.12'
           architecture: 'x64'
       - name: Install pycodestyle
-        run: pip install pycodestyle mypy
+        run: pip install pycodestyle
       - name: Check style
         run: pycodestyle --max-line-length=120 ./cayleypy
-      - name: Check typing
-        run: mypy ./cayleypy
   pytest-ubuntu:
     strategy:
       matrix:
@@ -40,6 +38,8 @@ jobs:
           pip install -r requirements-dev.txt
       - name: Run tests
         run: pytest
+      - name: Check typing
+        run: mypy ./cayleypy
   pytest-windows:
     name: Tests (Windows)
     runs-on: windows-latest
