@@ -77,7 +77,7 @@ class StringEncoder:
 
         lines = ["def f_(x):", " ans=torch.zeros_like(x)"]
         for (start_cw_id, end_cw_id, shift), mask in shift_to_mask.items():
-            line = f" ans[:,{end_cw_id}] |= (x[:,{start_cw_id}] & 0b{mask:b})"
+            line = f" ans[:,{end_cw_id}] |= (x[:,{start_cw_id}] & {mask})"
             if shift > 0:
                 line += f"<<{shift}"
             elif shift < 0:
