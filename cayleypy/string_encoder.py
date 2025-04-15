@@ -72,8 +72,8 @@ class StringEncoder:
                 shift = (end_bit % CODEWORD_LENGTH) - (start_bit % CODEWORD_LENGTH)
                 key = (start_cw_id, end_cw_id, shift)
                 if key not in shift_to_mask:
-                    shift_to_mask[key] = 0
-                shift_to_mask[key] |= (1 << (start_bit % CODEWORD_LENGTH))
+                    shift_to_mask[key] = np.int64(0)
+                shift_to_mask[key] |= (np.int64(1) << (start_bit % CODEWORD_LENGTH))
 
         lines = ["def f_(x):", " ans=torch.zeros_like(x)"]
         for (start_cw_id, end_cw_id, shift), mask in shift_to_mask.items():
