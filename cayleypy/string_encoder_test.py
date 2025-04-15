@@ -3,6 +3,7 @@ import math
 import numpy as np
 import pytest
 import torch
+from triton.language import dtype
 
 from .string_encoder import StringEncoder
 
@@ -24,7 +25,7 @@ def test_encode_decode(code_width, n):
 @pytest.mark.parametrize("code_width,n", [(1, 2), (1, 5), (2, 30), (10, 100)])
 def test_permutation(code_width: int, n: int):
     num_states = 5
-    s = torch.randint(0, 2 ** code_width, (num_states, n))
+    s = torch.randint(0, 2 ** code_width, (num_states, n), dtype=torch.int64)
     perm = np.random.permutation(n)
     expected = torch.tensor([_apply_permutation(row, perm) for row in s.numpy()])
     enc = StringEncoder(code_width=code_width, n=n)
