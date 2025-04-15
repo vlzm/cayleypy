@@ -39,6 +39,7 @@ jobs:
       - name: Run tests
         run: pytest
       - name: Check typing
+        if: ${{ matrix.python-version == '3.12' }}
         run: mypy ./cayleypy
   pytest-windows:
     name: Tests (Windows)
