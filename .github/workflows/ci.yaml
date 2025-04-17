@@ -18,8 +18,8 @@ jobs:
           architecture: 'x64'
       - name: Install pycodestyle
         run: pip install pycodestyle
-      - name: Check style
-        run: pycodestyle --max-line-length=120 ./cayleypy
+      - name: Lint
+        run: ./lint.sh
   pytest-ubuntu:
     strategy:
       matrix:
