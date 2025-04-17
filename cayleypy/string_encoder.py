@@ -19,12 +19,10 @@ class StringEncoder:
     """
 
     def __init__(self, *, code_width: int = 1, n: int = 1):
-        """
-        Initializes StringEncoder.
+        """Initializes StringEncoder.
 
-        Args:
-            code_width: Number of bits to encode one element of coset.
-            string_length: Length of the string. Defaults to 1.
+        :param code_width: Number of bits to encode one element of coset.
+        :param n: Length of the string to encode.
         """
         assert 1 <= code_width <= CODEWORD_LENGTH
         self.w = code_width

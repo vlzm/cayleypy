@@ -11,8 +11,18 @@ def _last_layer_to_str(layer):
     return set(''.join(str(int(x)) for x in state) for state in layer)
 
 
+# Large number of tests in auto mode (just verify growth function).
+# Special testas for last layers.
+# Special tests for max_radius.
+# Special tests for returning adjacency function.
+# Special case for: no bit encoding, forced bit encoding (1,2,3,..), hash chunking, batching.
+
+# TODO: test for all possible formats of generators.
+# TODO: test for all possible formats of destination states.
+
+
 @pytest.mark.parametrize("bit_encoding", [False, True])
-def test_bfs_growth_lrx(bit_encoding: bool):
+def test_bfs_growth_lrx_perm(bit_encoding: bool):
     # Tests growth starting from string 00..0 11..1 for even N.
     test_cases = [
         (2, [1, 1], {'10'}),
@@ -28,10 +38,8 @@ def test_bfs_growth_lrx(bit_encoding: bool):
     ]
 
     for n, expected_layer_sizes, expected_last_layer in test_cases:
-        bit_encoding_width = int(math.ceil(math.log2(n))) if bit_encoding else None
-        graph = CayleyGraph(prepare_generators("lrx", n=n), bit_encoding_width=bit_encoding_width, batch_size=1000)
-        start_state = list(range(n))
-        result = graph.bfs_growth(start_state)
+        graph = CayleyGraph(prepare_generators("lrx", n=n))
+        result = graph.bfs_growth()
         assert result.layer_sizes == expected_layer_sizes
         assert result.diameter == len(result.layer_sizes)
         assert _last_layer_to_str(result.last_layer) == expected_last_layer
@@ -39,14 +47,13 @@ def test_bfs_growth_lrx(bit_encoding: bool):
 
 def test_bfs_growth_lrx_n40():
     n = 40
-    start_states = torch.tensor([list(range(n))])
     generators = prepare_generators("lrx", n=n)
     graph1 = CayleyGraph(generators, bit_encoding_width=None)
-    result1 = graph1.bfs_growth(start_states, max_layers=5)
+    result1 = graph1.bfs_growth(max_layers=5)
     # We need 6*40=240 bits for encoding, so each states is encoded by four int64's.
     # This test verifies that first 5 layers are computed correctly when using bit encoding.
     graph2 = CayleyGraph(generators, bit_encoding_width=6)
-    result2 = graph2.bfs_growth(start_states, max_layers=5)
+    result2 = graph2.bfs_growth(max_layers=5)
     assert result1.layer_sizes == result2.layer_sizes
 
 
@@ -70,9 +77,9 @@ def test_bfs_growth_lrx_coset(bit_encoding_width):
     ]
 
     for n, expected_layer_sizes, expected_last_layer in test_cases:
-        graph = CayleyGraph(prepare_generators("lrx", n=n), bit_encoding_width=bit_encoding_width)
-        start_state = [0] * (n // 2) + [1] * (n // 2)
-        result = graph.bfs_growth(start_state)
+        dest = [0] * (n // 2) + [1] * (n // 2)
+        graph = CayleyGraph(prepare_generators("lrx", n=n), dest=dest)
+        result = graph.bfs_growth()
         assert result.layer_sizes == expected_layer_sizes
         assert result.diameter == len(result.layer_sizes)
         assert _last_layer_to_str(result.last_layer) == expected_last_layer
@@ -93,9 +100,9 @@ def test_bfs_growth_top_spin_coset(bit_encoding_width):
     ]
 
     for n, expected_layer_sizes, expected_last_layer in test_cases:
-        graph = CayleyGraph(prepare_generators("top_spin", n=n), bit_encoding_width=bit_encoding_width)
-        start_state = [0] * (n // 2) + [1] * (n // 2)
-        result = graph.bfs_growth(start_state)
+        dest = [0] * (n // 2) + [1] * (n // 2)
+        graph = CayleyGraph(prepare_generators("top_spin", n=n), dest=dest)
+        result = graph.bfs_growth()
         assert result.layer_sizes == expected_layer_sizes
         assert result.diameter == len(result.layer_sizes)
         assert _last_layer_to_str(result.last_layer) == expected_last_layer
@@ -109,7 +116,7 @@ BENCHMARK_RUN = os.getenv("BENCHMARK") == "1"
 @pytest.mark.parametrize("benchmark_mode", ["baseline", "bit_encoded"])
 @pytest.mark.parametrize("n", [28])
 def test_benchmark_top_spin(benchmark, benchmark_mode, n):
-    start_states = torch.tensor([[0] * (n // 2) + [1] * (n // 2)])
+    dest = [0] * (n // 2) + [1] * (n // 2)
     bit_encoding_width = 1 if benchmark_mode == "bit_encoded" else None
-    graph = CayleyGraph(prepare_generators("lrx", n=n), bit_encoding_width=bit_encoding_width)
-    benchmark(lambda: graph.bfs_growth(start_states))
+    graph = CayleyGraph(prepare_generators("lrx", n=n), dest=dest, bit_encoding_width=bit_encoding_width)
+    benchmark(lambda: graph.bfs_growth())

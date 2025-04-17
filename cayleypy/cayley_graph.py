@@ -1,3 +1,5 @@
+import math
+
 import numpy as np
 from dataclasses import dataclass
 
@@ -11,29 +13,52 @@ class BfsGrowthResult:
     diameter: int  # Maximal distance from start to some state (=len(layer_sizes)).
     last_layer: torch.Tensor  # States at maximal distance from start.
 
+    """Represents a Schreier coset graph for the group S_n (group of n-element permutations).
+
+    In this graph:
+      * Vertices (aka "states") are strings of integers of size n.
+      * Edges are permutations of size n from given set of `generators`.
+      * There is an outgoing edge for every vertex A and every generating permutation P.
+      * On the other end of this edge, there is a vertex P(A).
+    In general case, this graph is directed. However, in the case when set of generators is closed under inversion,
+        every edge has and edge in other direction, so the graph can be viewed as undirected.
+    The graph is fully defined by list of generators and one selected state called "destination state". It contains
+        all vertices reachable from the destination state.
+    In the case when destination state is a permutation itself, and generators fully generate S_n, this is a Cayley 
+        graph for S_n, hence the name. In more general case, elements can have less than n distinct values, and we call
+        the set of vertices "coset".
+    """
+
 
 class CayleyGraph:
-    """
-    TODO: rewrite this comment.
-    class to encapsulate all of permutation group in one place
-    must help keeping reproducibility and dev speed
-
-    Args:
-        TODO: all args.
-        bit_encoding_width - if set, specifies that coset elements must be encoded in memory-efficient way, using this
-          much bits per element.
-    """
-
     def __init__(
             self,
             generators: list[list[int]] | torch.Tensor | np.ndarray,
             *,
-            device: str = 'auto',
+            dest: list[int] | torch.Tensor | np.ndarray | str | None = None,
+            device: str = "auto",
             random_seed: Optional[int] = None,
-            bit_encoding_width: Optional[int] = None,
+            bit_encoding_width: Optional[int] | str = "auto",
             verbose: int = 0,
             batch_size: int = 2 ** 25,
             hash_chunk_size: int = 2 ** 25):
+        """Initializes CayleyGraph.
+
+        :param generators: List of generating permutations of size n.
+        :param dest: List of n numbers between 0 and n-1, the destination state.
+                 If None, defaults to the identity permutation of size n.
+        :param device: one of ['auto','cpu','cuda'] - PyTorch device to store all tensors.
+        :param random_seed: random seed for deterministic hashing.
+        :param bit_encoding_width: how many bits (between 1 and 63) to use to encode one element in a state.
+                 If 'auto', optimal width will be picked.
+                 If None, elements will be encoded by int64 numbers.
+        :param verbose: Level of logging. 0 means no logging.
+        :param batch_size: Size of batch for batch processing.
+        :param hash_chunk_size: Size of chunk for hashing.
+        """
+        self.verbose = verbose
+        self.batch_size = batch_size
+
         # Pick device. It will be used to store all tensors.
         assert device in ["auto", "cpu", "cuda"]
         if device == "auto":
@@ -54,7 +79,7 @@ class CayleyGraph:
         self.generators = torch.tensor(generators_list, dtype=torch.int64, device=self.device)
 
         # Validate generators.
-        self.state_size = len(generators_list[0])
+        self.state_size = len(generators_list[0])  # Size of permutations.
         self.n_generators = len(generators_list)
         generators_set = set(tuple(perm) for perm in generators_list)
         id_perm = list(range(self.state_size))
@@ -64,7 +89,19 @@ class CayleyGraph:
             if tuple(inverse_permutation(perm)) not in generators_set:
                 self.generators_inverse_closed = False
 
+        # Prepare destination state.
+        if dest is None:
+            dest = list(range(self.state_size))  # Identity permutation.
+        elif type(dest) is str:
+            dest = [int(x) for x in dest]
+        self.destination_state = torch.tensor(dest, device=self.device, dtype=torch.int64)
+        assert self.destination_state.shape == (self.state_size,)
+        assert int(self.destination_state.min()) >= 0
+        assert int(self.destination_state.max()) < self.state_size
+
         # Prepare encoder in case we want to encode states using few bits per element.
+        if bit_encoding_width == "auto":
+            bit_encoding_width = int(math.ceil(math.log2(int(self.destination_state.max()) + 1)))
         self.string_encoder: Optional[StringEncoder] = None
         encoded_state_size: int = self.state_size
         if bit_encoding_width is not None:
@@ -73,8 +110,6 @@ class CayleyGraph:
             encoded_state_size = self.string_encoder.encoded_length
 
         self.hasher = StateHasher(encoded_state_size, random_seed, self.device, chunk_size=hash_chunk_size)
-        self.batch_size = batch_size
-        self.verbose = verbose
 
     def get_unique_states_2(self, states: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         '''
@@ -150,12 +185,17 @@ class CayleyGraph:
         return neighbors, nb_hashes
 
     def bfs_growth(self,
-                   start_states: torch.Tensor | np.ndarray | list,
-                   max_layers: int = 1000000000) -> BfsGrowthResult:
-        """Finds distance from given set of states to all other reachable states."""
-        assert self.generators_inverse_closed, "BFS is supported only when generators are inverse-closed."
+                   *,
+                   start_states: None | torch.Tensor | np.ndarray | list = None,
+                   max_layers: int = 1000000) -> BfsGrowthResult:
+        """Finds distance from given set of states to all other reachable states.
 
-        start_states = self._encode_states(start_states)
+        :param start_states: states on 0-th layer of BFS. Defaults to destination state of the graph.
+        :param max_layers: maximal number of BFS iterations.
+        :return: BfsGrowthResult object with requested BFS results.
+        """        
+        assert self.generators_inverse_closed, "BFS is supported only when generators are inverse-closed."
+        start_states = self._encode_states(start_states or self.destination_state)
         layer0_hashes = torch.empty((0,), dtype=torch.int64, device=self.device)
         layer1, layer1_hashes, _ = self.get_unique_states_2(start_states)
         layer_sizes = [len(layer1)]
