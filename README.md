@@ -30,7 +30,7 @@ pip install -r requirements-dev.txt
 
 Before commiting, run these checks:
 ```
-tools/lint.sh
+./lint.sh
 pytest 
 ```
 

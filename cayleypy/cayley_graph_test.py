@@ -2,7 +2,7 @@ import os
 
 import pytest
 
-from cayleypy import CayleyGraph, get_graph
+from cayleypy import CayleyGraph, get_graph, load_dataset
 
 
 def _last_layer_to_str(layer):
@@ -20,7 +20,7 @@ def _last_layer_to_str(layer):
 
 
 @pytest.mark.parametrize("bit_encoding", [False, True])
-def test_bfs_growth_lrx_perm(bit_encoding: bool):
+def test_bfs_growth_lrx_perm_2(bit_encoding: bool):
     # Tests growth starting from string 00..0 11..1 for even N.
     test_cases = [
         (2, [1, 1], {'10'}),
@@ -107,6 +107,41 @@ def test_bfs_growth_top_spin_coset(bit_encoding_width):
         assert result.layer_sizes == expected_layer_sizes
         assert result.diameter == len(result.layer_sizes)
         assert _last_layer_to_str(result.last_layer) == expected_last_layer
+
+
+# Tests below compare computation results for small n with stored pre-computed results.
+def test_lrx_cayley_growth():
+    expected = load_dataset("lrx_cayley_growth")
+    for n in range(2, 10):
+        generators, _ = get_graph("lrx", n=int(n))
+        result = CayleyGraph(generators).bfs_growth()
+        assert result.layer_sizes == expected[str(n)]
+
+
+def test_top_spin_cayley_growth():
+    expected = load_dataset("top_spin_cayley_growth")
+    for n in range(4, 10):
+        generators, _ = get_graph("top_spin", n=int(n))
+        result = CayleyGraph(generators).bfs_growth()
+        assert result.layer_sizes == expected[str(n)]
+
+
+def test_lrx_coset_growth():
+    expected = load_dataset("lrx_coset_growth")
+    for initial_state in expected.keys():
+        if len(initial_state) > 15: continue
+        generators, _ = get_graph("lrx", n=len(initial_state))
+        result = CayleyGraph(generators, dest=initial_state).bfs_growth()
+        assert result.layer_sizes == expected[initial_state]
+
+
+def test_top_spin_coset_growth():
+    expected = load_dataset("top_spin_coset_growth")
+    for initial_state in expected.keys():
+        if len(initial_state) > 15: continue
+        generators, _ = get_graph("top_spin", n=len(initial_state))
+        result = CayleyGraph(generators, dest=initial_state).bfs_growth()
+        assert result.layer_sizes == expected[initial_state]
 
 
 # Below is the benchmark code. To tun: `BENCHMARK=1 pytest . -k benchmark`

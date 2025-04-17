@@ -15,7 +15,6 @@ class BfsGrowthResult:
     last_layer: torch.Tensor  # States at maximal distance from start.
 
 
-
 class CayleyGraph:
     """Represents a Schreier coset graph for the group S_n (group of n-element permutations).
 
@@ -194,7 +193,7 @@ class CayleyGraph:
         :param start_states: states on 0-th layer of BFS. Defaults to destination state of the graph.
         :param max_layers: maximal number of BFS iterations.
         :return: BfsGrowthResult object with requested BFS results.
-        """        
+        """
         assert self.generators_inverse_closed, "BFS is supported only when generators are inverse-closed."
         start_states = self._encode_states(start_states or self.destination_state)
         layer0_hashes = torch.empty((0,), dtype=torch.int64, device=self.device)
