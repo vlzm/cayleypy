@@ -1,10 +1,12 @@
 """Helper functions."""
 import gc
+import math
 from typing import Callable, Optional, Sequence
 
 import torch
 
 
+# TODO: move to separate file?
 class StateHasher:
     def __init__(self, state_size: int, random_seed: Optional[int], device: torch.device, chunk_size=2 ** 18):
         self.state_size = state_size
@@ -32,15 +34,15 @@ class StateHasher:
         if states.shape[0] <= self.chunk_size:
             return (states @ self.vec_hasher).reshape(-1)
         else:
-            print("Chunked hashing, modern")
-            return torch.hstack([z @ self.vec_hasher for z in torch.tensor_split(states, 8)])
+            parts = int(math.ceil(self.chunk_size / states.shape[0]))
+            return torch.hstack([z @ self.vec_hasher for z in torch.tensor_split(states, parts)])
 
     def _make_hashes_older_gpu(self, states: torch.Tensor) -> torch.Tensor:
         if states.shape[0] <= self.chunk_size:
             return torch.sum(states * self.vec_hasher, dim=1)
         else:
-            print("Chunked hashing, old")
-            return torch.hstack([torch.sum(z * self.vec_hasher, dim=1) for z in torch.tensor_split(states, 8)])
+            parts = int(math.ceil(self.chunk_size / states.shape[0]))
+            return torch.hstack([torch.sum(z * self.vec_hasher, dim=1) for z in torch.tensor_split(states, parts)])
 
 
 def inverse_permutation(p: Sequence[int]) -> list[int]:
@@ -51,12 +53,6 @@ def inverse_permutation(p: Sequence[int]) -> list[int]:
     return ans
 
 
-def free_memory():
-    gc.collect()
-    torch.cuda.empty_cache()
-    gc.collect()
-
-
 def get_neighbors_plain(states, moves):
     """
     Some torch magic to calculate all new states which can be obtained from states by moves
@@ -65,16 +61,3 @@ def get_neighbors_plain(states, moves):
                         2,
                         moves.unsqueeze(0).expand(states.size(0), moves.shape[0], states.size(1))).flatten(
         end_dim=1)  # added flatten to the end, because we always add it
-
-
-def get_neighbors2(states, moves, chunking_thres=2 ** 18):
-    """
-    Some torch magic to calculate all new states which can be obtained from states by moves
-    """
-    s_sh = states.shape[0]
-    if s_sh > chunking_thres:
-        result = torch.zeros(s_sh * moves.shape[0], states.shape[1], dtype=states.dtype, device=states.device)
-        for i in range(0, moves.shape[0]):
-            result[i * s_sh:(i + 1) * s_sh, :] = get_neighbors_plain(states, torch.narrow(moves, 0, i, 1))
-        return result
-    return get_neighbors_plain(states, moves)

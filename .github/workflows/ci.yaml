@@ -40,7 +40,7 @@ jobs:
         run: pytest
       - name: Lint
         if: ${{ matrix.python-version == '3.12' }}
-        run: ./lint.sh
+        run: tools/lint.sh
   pytest-windows:
     name: Tests (Windows)
     runs-on: windows-latest

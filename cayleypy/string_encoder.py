@@ -59,8 +59,11 @@ class StringEncoder:
             orig[:, i // w] |= ((encoded[:, i // cl] >> (i % cl)) & 1) << (i % w)
         return orig
 
-    def implement_permutation(self, p: Sequence[int] | np.ndarray) -> Callable[[torch.Tensor], torch.Tensor]:
-        """Converts permutation to a function on encoded tensor implementing this permutation."""
+    def implement_permutation(self, p: Sequence[int] | np.ndarray) -> Callable[[torch.Tensor, torch.Tensor], None]:
+        """Converts permutation to a function on encoded tensor implementing this permutation.
+
+        This function writes result to tensor in second argument, which must be initialized to zeros.
+        """
         assert len(p) == self.n
         shift_to_mask: dict[tuple[int, int, int], np.int64] = dict()
         for i in range(self.n):
@@ -75,15 +78,14 @@ class StringEncoder:
                     shift_to_mask[key] = np.int64(0)
                 shift_to_mask[key] |= (np.int64(1) << (start_bit % CODEWORD_LENGTH))
 
-        lines = ["def f_(x):", " ans=torch.zeros_like(x)"]
+        lines = ["def f_(x,y):"]
         for (start_cw_id, end_cw_id, shift), mask in shift_to_mask.items():
-            line = f" ans[:,{end_cw_id}] |= (x[:,{start_cw_id}] & {mask})"
+            line = f" y[:,{end_cw_id}] |= (x[:,{start_cw_id}] & {mask})"
             if shift > 0:
                 line += f"<<{shift}"
             elif shift < 0:
                 line += f">>{-shift}"
             lines.append(line)
-        lines += [" return ans"]
         src = "\n".join(lines)
         l: dict = {}
         exec(src, {"torch": torch}, l)

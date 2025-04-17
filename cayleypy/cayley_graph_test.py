@@ -29,7 +29,7 @@ def test_bfs_growth_lrx(bit_encoding: bool):
 
     for n, expected_layer_sizes, expected_last_layer in test_cases:
         bit_encoding_width = int(math.ceil(math.log2(n))) if bit_encoding else None
-        graph = CayleyGraph(prepare_generators("lrx", n=n), bit_encoding_width=bit_encoding_width)
+        graph = CayleyGraph(prepare_generators("lrx", n=n), bit_encoding_width=bit_encoding_width, batch_size=1000)
         start_state = list(range(n))
         result = graph.bfs_growth(start_state)
         assert result.layer_sizes == expected_layer_sizes

@@ -1,8 +1,5 @@
-import torch
-import time
 import numpy as np
 from dataclasses import dataclass
-from typing import Callable, Optional
 
 from .utils import *
 from .string_encoder import StringEncoder
@@ -35,7 +32,8 @@ class CayleyGraph:
             random_seed: Optional[int] = None,
             bit_encoding_width: Optional[int] = None,
             verbose: int = 0,
-            hash_chunk_size: int = 2 ** 26):
+            batch_size: int = 2 ** 25,
+            hash_chunk_size: int = 2 ** 25):
         # Pick device. It will be used to store all tensors.
         assert device in ["auto", "cpu", "cuda"]
         if device == "auto":
@@ -75,6 +73,7 @@ class CayleyGraph:
             encoded_state_size = self.string_encoder.encoded_length
 
         self.hasher = StateHasher(encoded_state_size, random_seed, self.device, chunk_size=hash_chunk_size)
+        self.batch_size = batch_size
         self.verbose = verbose
 
     def get_unique_states_2(self, states: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
@@ -90,22 +89,22 @@ class CayleyGraph:
         # That is in contrast to numpy.unique which supports - set: return_index = True
 
         # Hashing rows of states matrix:
-        hashed = self.hasher.make_hashes(states)
+        hashes = self.hasher.make_hashes(states)
 
         # sort
-        hashed_sorted, idx = torch.sort(hashed, stable=True)
+        hashes_sorted, idx = torch.sort(hashes, stable=True)
 
         # Mask initialization
-        mask = torch.ones(hashed_sorted.size(0), dtype=torch.bool, device=self.device)
+        mask = torch.ones(hashes_sorted.size(0), dtype=torch.bool, device=self.device)
 
         # Mask main part:
-        if hashed_sorted.size(0) > 1:
-            mask[1:] = (hashed_sorted[1:] != hashed_sorted[:-1])
+        if hashes_sorted.size(0) > 1:
+            mask[1:] = (hashes_sorted[1:] != hashes_sorted[:-1])
 
         # Update index
         IX1 = idx[mask]
 
-        return states[IX1], hashed[IX1], IX1
+        return states[IX1], hashes[IX1], IX1
 
     def _encode_states(self, states: torch.Tensor | np.ndarray | list) -> torch.Tensor:
         states = torch.as_tensor(states, device=self.device)
@@ -122,10 +121,33 @@ class CayleyGraph:
             return self.string_encoder.decode(states)
         return states
 
-    def _get_neighbors(self, states: torch.Tensor) -> torch.Tensor:
+    def _get_neighbors(self, states: torch.Tensor, dest: torch.Tensor):
+        """Calculates all neighbors of `states`, writes them to `dest`, which must be initialized to zeros."""
+        states_num = states.shape[0]
+        assert dest.shape[0] == states_num * self.n_generators
         if self.string_encoder is not None:
-            return torch.vstack([f(states) for f in self.encoded_generators])
-        return get_neighbors2(states, self.generators)
+            for i in range(self.n_generators):
+                self.encoded_generators[i](states, dest[i * states_num:(i + 1) * states_num])
+        else:
+            dest[:, :] = get_neighbors_plain(states, self.generators)
+
+    def _get_unique_neighbors_and_hashes_batched(self, states: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        if states.shape[0] <= self.batch_size:
+            neighbors = torch.zeros((states.shape[0] * self.n_generators, states.shape[1]), dtype=torch.int64)
+            self._get_neighbors(states, neighbors)
+            neighbors, nb_hashes, _ = self.get_unique_states_2(neighbors)
+        else:
+            num_batches = int(math.ceil(states.shape[0] / self.batch_size))
+            neighbors = torch.zeros((self.n_generators * states.shape[0], states.shape[1]), dtype=torch.int64)
+            i = 0
+            for batch in states.tensor_split(num_batches, dim=0):
+                num_neighbors = self.n_generators * batch.shape[0]
+                self._get_neighbors(batch, neighbors[i:i + num_neighbors, :])
+                self._free_memory()
+                i += num_neighbors
+            neighbors, nb_hashes, _ = self.get_unique_states_2(neighbors)
+            self._free_memory()
+        return neighbors, nb_hashes
 
     def bfs_growth(self,
                    start_states: torch.Tensor | np.ndarray | list,
@@ -139,7 +161,7 @@ class CayleyGraph:
         layer_sizes = [len(layer1)]
 
         for i in range(1, max_layers):
-            layer2, layer2_hashes, _ = self.get_unique_states_2(self._get_neighbors(layer1))
+            layer2, layer2_hashes = self._get_unique_neighbors_and_hashes_batched(layer1)
 
             # layer2 -= (layer0+layer1)
             # Warning: hash collisions are not handled.
@@ -160,3 +182,9 @@ class CayleyGraph:
         return BfsGrowthResult(layer_sizes=layer_sizes,
                                diameter=len(layer_sizes),
                                last_layer=self._decode_states(layer1))
+
+    def _free_memory(self):
+        gc.collect()
+        if self.device.type == 'cuda':
+            torch.cuda.empty_cache()
+            gc.collect()
