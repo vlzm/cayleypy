@@ -8,7 +8,7 @@ on:
 
 jobs:
   style-check:
-    name: Style check
+    name: Check style
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
@@ -18,8 +18,8 @@ jobs:
           architecture: 'x64'
       - name: Install pycodestyle
         run: pip install pycodestyle
-      - name: Lint
-        run: ./lint.sh
+      - name: Check style
+        run: pycodestyle --max-line-length=120 ./cayleypy
   pytest-ubuntu:
     strategy:
       matrix:
@@ -38,9 +38,9 @@ jobs:
           pip install -r requirements-dev.txt
       - name: Run tests
         run: pytest
-      - name: Check typing
+      - name: Lint
         if: ${{ matrix.python-version == '3.12' }}
-        run: mypy ./cayleypy
+        run: ./lint.sh
   pytest-windows:
     name: Tests (Windows)
     runs-on: windows-latest

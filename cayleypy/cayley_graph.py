@@ -34,7 +34,8 @@ class CayleyGraph:
             device: str = 'auto',
             random_seed: Optional[int] = None,
             bit_encoding_width: Optional[int] = None,
-            verbose: int = 0):
+            verbose: int = 0,
+            hash_chunk_size: int = 2 ** 26):
         # Pick device. It will be used to store all tensors.
         assert device in ["auto", "cpu", "cuda"]
         if device == "auto":
@@ -73,7 +74,7 @@ class CayleyGraph:
             self.encoded_generators = [self.string_encoder.implement_permutation(perm) for perm in generators]
             encoded_state_size = self.string_encoder.encoded_length
 
-        self.hasher = StateHasher(encoded_state_size, random_seed, self.device)
+        self.hasher = StateHasher(encoded_state_size, random_seed, self.device, chunk_size=hash_chunk_size)
         self.verbose = verbose
 
     def get_unique_states_2(self, states: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
