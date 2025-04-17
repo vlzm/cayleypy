@@ -1,10 +1,8 @@
-import math
 import os
 
 import pytest
-import torch
 
-from cayleypy import CayleyGraph, prepare_generators
+from cayleypy import CayleyGraph, get_graph
 
 
 def _last_layer_to_str(layer):
@@ -38,7 +36,8 @@ def test_bfs_growth_lrx_perm(bit_encoding: bool):
     ]
 
     for n, expected_layer_sizes, expected_last_layer in test_cases:
-        graph = CayleyGraph(prepare_generators("lrx", n=n))
+        generators, _ = get_graph("lrx", n=n)
+        graph = CayleyGraph(generators)
         result = graph.bfs_growth()
         assert result.layer_sizes == expected_layer_sizes
         assert result.diameter == len(result.layer_sizes)
@@ -47,7 +46,7 @@ def test_bfs_growth_lrx_perm(bit_encoding: bool):
 
 def test_bfs_growth_lrx_n40():
     n = 40
-    generators = prepare_generators("lrx", n=n)
+    generators, _ = get_graph("lrx", n=n)
     graph1 = CayleyGraph(generators, bit_encoding_width=None)
     result1 = graph1.bfs_growth(max_layers=5)
     # We need 6*40=240 bits for encoding, so each states is encoded by four int64's.
@@ -78,7 +77,8 @@ def test_bfs_growth_lrx_coset(bit_encoding_width):
 
     for n, expected_layer_sizes, expected_last_layer in test_cases:
         dest = [0] * (n // 2) + [1] * (n // 2)
-        graph = CayleyGraph(prepare_generators("lrx", n=n), dest=dest)
+        generators, _ = get_graph("lrx", n=n)
+        graph = CayleyGraph(generators, dest=dest)
         result = graph.bfs_growth()
         assert result.layer_sizes == expected_layer_sizes
         assert result.diameter == len(result.layer_sizes)
@@ -101,7 +101,8 @@ def test_bfs_growth_top_spin_coset(bit_encoding_width):
 
     for n, expected_layer_sizes, expected_last_layer in test_cases:
         dest = [0] * (n // 2) + [1] * (n // 2)
-        graph = CayleyGraph(prepare_generators("top_spin", n=n), dest=dest)
+        generators, _ = get_graph("top_spin", n=n)
+        graph = CayleyGraph(generators, dest=dest)
         result = graph.bfs_growth()
         assert result.layer_sizes == expected_layer_sizes
         assert result.diameter == len(result.layer_sizes)
@@ -116,7 +117,8 @@ BENCHMARK_RUN = os.getenv("BENCHMARK") == "1"
 @pytest.mark.parametrize("benchmark_mode", ["baseline", "bit_encoded"])
 @pytest.mark.parametrize("n", [28])
 def test_benchmark_top_spin(benchmark, benchmark_mode, n):
+    generators, _ = get_graph("lrx", n=n)
     dest = [0] * (n // 2) + [1] * (n // 2)
     bit_encoding_width = 1 if benchmark_mode == "bit_encoded" else None
-    graph = CayleyGraph(prepare_generators("lrx", n=n), dest=dest, bit_encoding_width=bit_encoding_width)
+    graph = CayleyGraph(generators, dest=dest, bit_encoding_width=bit_encoding_width)
     benchmark(lambda: graph.bfs_growth())

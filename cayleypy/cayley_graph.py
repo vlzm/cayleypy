@@ -9,10 +9,14 @@ from .string_encoder import StringEncoder
 
 @dataclass
 class BfsGrowthResult:
+    """Result of running breadth-first search on a Schreier coset graph."""
     layer_sizes: list[int]  # i-th element is number of states at distance i from start.
     diameter: int  # Maximal distance from start to some state (=len(layer_sizes)).
     last_layer: torch.Tensor  # States at maximal distance from start.
 
+
+
+class CayleyGraph:
     """Represents a Schreier coset graph for the group S_n (group of n-element permutations).
 
     In this graph:
@@ -24,13 +28,10 @@ class BfsGrowthResult:
         every edge has and edge in other direction, so the graph can be viewed as undirected.
     The graph is fully defined by list of generators and one selected state called "destination state". It contains
         all vertices reachable from the destination state.
-    In the case when destination state is a permutation itself, and generators fully generate S_n, this is a Cayley 
+    In the case when destination state is a permutation itself, and generators fully generate S_n, this is a Cayley
         graph for S_n, hence the name. In more general case, elements can have less than n distinct values, and we call
         the set of vertices "coset".
     """
-
-
-class CayleyGraph:
     def __init__(
             self,
             generators: list[list[int]] | torch.Tensor | np.ndarray,
