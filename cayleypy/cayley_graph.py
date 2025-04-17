@@ -138,7 +138,7 @@ class CayleyGraph:
         layer1, layer1_hashes, _ = self.get_unique_states_2(start_states)
         layer_sizes = [len(layer1)]
 
-        for _ in range(1, max_layers):
+        for i in range(1, max_layers):
             layer2, layer2_hashes, _ = self.get_unique_states_2(self._get_neighbors(layer1))
 
             # layer2 -= (layer0+layer1)
@@ -151,6 +151,8 @@ class CayleyGraph:
 
             if len(layer2) == 0:
                 break
+            if self.verbose >= 2:
+                print(f"Layer {i}: {len(layer2)} states.")
             layer_sizes.append(len(layer2))
             layer1 = layer2
             layer0_hashes, layer1_hashes = layer1_hashes, layer2_hashes
