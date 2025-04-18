@@ -130,17 +130,23 @@ def test_bfs_bit_encoding(bit_encoding_width):
 
 
 @pytest.mark.parametrize("bit_encoding_width", [None, 'auto'])
-@pytest.mark.parametrize("batch_size", [10000, 10 ** 9])
+@pytest.mark.parametrize("batch_size", [100, 1000, 10 ** 9])
 def test_bfs_batching(bit_encoding_width, batch_size: int):
     generators, _ = prepare_graph("lrx", n=8)
     result = CayleyGraph(generators, bit_encoding_width=bit_encoding_width, batch_size=batch_size).bfs()
     assert result.layer_sizes == load_dataset("lrx_cayley_growth")["8"]
 
 
-@pytest.mark.parametrize("hash_chunk_size", [10000, 10 ** 9])
+@pytest.mark.parametrize("hash_chunk_size", [100, 1000, 10 ** 9])
 def test_bfs_hash_chunking(hash_chunk_size: int):
     generators, _ = prepare_graph("lrx", n=8)
     result = CayleyGraph(generators, hash_chunk_size=hash_chunk_size).bfs()
+    assert result.layer_sizes == load_dataset("lrx_cayley_growth")["8"]
+
+
+def test_free_memory():
+    generators, _ = prepare_graph("lrx", n=8)
+    result = CayleyGraph(generators, memory_limit_gb=0.0001).bfs()
     assert result.layer_sizes == load_dataset("lrx_cayley_growth")["8"]
 
 

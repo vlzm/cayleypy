@@ -34,6 +34,11 @@ Before commiting, run these checks:
 pytest 
 ```
 
+To check coverage, run:
+```
+coverage run -m pytest && coverage html
+```
+
 
 ## Credits
 

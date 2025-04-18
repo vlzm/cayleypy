@@ -38,7 +38,8 @@ class CayleyGraph:
             bit_encoding_width: Optional[int] | str = "auto",
             verbose: int = 0,
             batch_size: int = 2 ** 25,
-            hash_chunk_size: int = 2 ** 25):
+            hash_chunk_size: int = 2 ** 25,
+            memory_limit_gb: float = 16):
         """Initializes CayleyGraph.
 
         :param generators: List of generating permutations of size n.
@@ -52,9 +53,11 @@ class CayleyGraph:
         :param verbose: Level of logging. 0 means no logging.
         :param batch_size: Size of batch for batch processing.
         :param hash_chunk_size: Size of chunk for hashing.
+        :param memory_limit_gb: Approximate available memory, in GB.
         """
         self.verbose = verbose
         self.batch_size = batch_size
+        self.memory_limit_bytes = int(memory_limit_gb * (2 ** 30))
 
         # Pick device. It will be used to store all tensors.
         assert device in ["auto", "cpu", "cuda"]
@@ -169,6 +172,10 @@ class CayleyGraph:
             ).flatten(end_dim=1)
 
     def _get_unique_neighbors_and_hashes_batched(self, states: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        estimated_result_size = states.shape[0] * states.shape[1] * self.n_generators * 8
+        if 5 * estimated_result_size > self.memory_limit_bytes:
+            self._free_memory()
+
         if states.shape[0] <= self.batch_size:
             neighbors = torch.zeros((states.shape[0] * self.n_generators, states.shape[1]), dtype=torch.int64)
             self._get_neighbors(states, neighbors)
@@ -180,10 +187,8 @@ class CayleyGraph:
             for batch in states.tensor_split(num_batches, dim=0):
                 num_neighbors = self.n_generators * batch.shape[0]
                 self._get_neighbors(batch, neighbors[i:i + num_neighbors, :])
-                self._free_memory()
                 i += num_neighbors
             neighbors, nb_hashes, _ = self.get_unique_states_2(neighbors)
-            self._free_memory()
         return neighbors, nb_hashes
 
     def bfs(self,
