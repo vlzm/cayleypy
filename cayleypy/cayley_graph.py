@@ -54,6 +54,8 @@ class CayleyGraph:
         :param batch_size: Size of batch for batch processing.
         :param hash_chunk_size: Size of chunk for hashing.
         :param memory_limit_gb: Approximate available memory, in GB.
+                 It is safe to set this to less than available on your machine, it will just cause more frequent calls
+                 to the "free memory" function.
         """
         self.verbose = verbose
         self.batch_size = batch_size
