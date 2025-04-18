@@ -9,7 +9,7 @@ from cayleypy import CayleyGraph, prepare_graph, load_dataset
 
 # TODO: Special tests for returning adjacency matrix.
 # TODO: Test for netwrorkx for small graphs.
-
+# TODO: Test for set of edges represented by pairs of strings.
 
 def test_generators_format():
     generators = [[1, 2, 0], [2, 0, 1], [1, 0, 2]]
@@ -150,7 +150,18 @@ def test_free_memory():
     assert result.layer_sizes == load_dataset("lrx_cayley_growth")["8"]
 
 
-# Tests below compare growth function for small n with stored pre-computed results.
+def test_get_neighbors():
+    # Directly check _get_neighbors_batched.
+    # It should go over the generators in outer loop, and over the states in inner loop.
+    # We rely on this convention when building list of edges.
+    graph = CayleyGraph([[1, 0, 2, 3, 4], [0, 1, 2, 4, 3]], bit_encoding_width=5)  # 5
+    states = graph._encode_states(torch.tensor([[10, 11, 12, 13, 14], [15, 16, 17, 18, 19]], dtype=torch.int64))
+    result = graph._decode_states(graph._get_neighbors_batched(states))
+    assert torch.equal(result, torch.tensor(
+        [[11, 10, 12, 13, 14], [16, 15, 17, 18, 19], [10, 11, 12, 14, 13], [15, 16, 17, 19, 18]]))
+
+
+# Tests below compare growth function for small graphs with stored pre-computed results.
 def test_lrx_cayley_growth():
     expected = load_dataset("lrx_cayley_growth")
     for n in range(2, 10):
@@ -177,6 +188,16 @@ def test_lrx_coset_growth():
         assert result.layer_sizes == expected[initial_state]
 
 
+def test_cube222_QTM():
+    generators, dest = prepare_graph("cube_2/2/2_6gensQTM")
+    graph = CayleyGraph(generators, dest=dest)
+    result = graph.bfs()
+    assert result.num_vertices == 3674160
+    assert result.diameter() == 14
+    assert result.layer_sizes == [
+        1, 6, 27, 120, 534, 2256, 8969, 33058, 114149, 360508, 930588, 1350852, 782536, 90280, 276]
+
+
 def test_top_spin_coset_growth():
     expected = load_dataset("top_spin_coset_growth")
     for initial_state in expected.keys():
@@ -185,17 +206,6 @@ def test_top_spin_coset_growth():
         generators, _ = prepare_graph("top_spin", n=len(initial_state))
         result = CayleyGraph(generators, dest=initial_state).bfs()
         assert result.layer_sizes == expected[initial_state]
-
-
-def test_get_neighbors():
-    # Directly check _get_neighbors_batched.
-    # It should go over the generators in outer loop, and over the states in inner loop.
-    # We rely on this convention when building list of edges.
-    graph = CayleyGraph([[1, 0, 2, 3, 4], [0, 1, 2, 4, 3]], bit_encoding_width=5)  # 5
-    states = graph._encode_states(torch.tensor([[10, 11, 12, 13, 14], [15, 16, 17, 18, 19]], dtype=torch.int64))
-    result = graph._decode_states(graph._get_neighbors_batched(states))
-    assert torch.equal(result, torch.tensor(
-        [[11, 10, 12, 13, 14], [16, 15, 17, 18, 19], [10, 11, 12, 14, 13], [15, 16, 17, 19, 18]]))
 
 
 # Below is the benchmark code. To tun: `BENCHMARK=1 pytest . -k benchmark`
