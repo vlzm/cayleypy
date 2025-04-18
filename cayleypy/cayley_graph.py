@@ -1,18 +1,14 @@
+import gc
 import math
+from typing import Optional
 
 import numpy as np
-from dataclasses import dataclass
+import torch
 
-from .utils import *
+from .bfs_result import BfsResult
+from .hasher import StateHasher
 from .string_encoder import StringEncoder
-
-
-@dataclass
-class BfsGrowthResult:
-    """Result of running breadth-first search on a Schreier coset graph."""
-    layer_sizes: list[int]  # i-th element is number of states at distance i from start.
-    diameter: int  # Maximal distance from start to some state (=len(layer_sizes)).
-    last_layer: torch.Tensor  # States at maximal distance from start.
+from .utils import *
 
 
 class CayleyGraph:
@@ -31,6 +27,7 @@ class CayleyGraph:
         graph for S_n, hence the name. In more general case, elements can have less than n distinct values, and we call
         the set of vertices "coset".
     """
+
     def __init__(
             self,
             generators: list[list[int]] | torch.Tensor | np.ndarray,
@@ -94,7 +91,7 @@ class CayleyGraph:
             dest = list(range(self.state_size))  # Identity permutation.
         elif type(dest) is str:
             dest = [int(x) for x in dest]
-        self.destination_state = torch.tensor(dest, device=self.device, dtype=torch.int64)
+        self.destination_state = torch.as_tensor(dest, device=self.device, dtype=torch.int64)
         assert self.destination_state.shape == (self.state_size,)
         assert int(self.destination_state.min()) >= 0
         assert int(self.destination_state.max()) < self.state_size
@@ -164,7 +161,12 @@ class CayleyGraph:
             for i in range(self.n_generators):
                 self.encoded_generators[i](states, dest[i * states_num:(i + 1) * states_num])
         else:
-            dest[:, :] = get_neighbors_plain(states, self.generators)
+            moves = self.generators
+            dest[:, :] = torch.gather(
+                states.unsqueeze(1).expand(states.size(0), moves.shape[0], states.size(1)),
+                2,
+                moves.unsqueeze(0).expand(states.size(0), moves.shape[0], states.size(1))
+            ).flatten(end_dim=1)
 
     def _get_unique_neighbors_and_hashes_batched(self, states: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         if states.shape[0] <= self.batch_size:
@@ -184,27 +186,35 @@ class CayleyGraph:
             self._free_memory()
         return neighbors, nb_hashes
 
-    def bfs_growth(self,
-                   *,
-                   start_states: None | torch.Tensor | np.ndarray | list = None,
-                   max_layers: int = 1000000) -> BfsGrowthResult:
-        """Finds distance from given set of states to all other reachable states.
+    def bfs(self,
+            *,
+            start_states: None | torch.Tensor | np.ndarray | list = None,
+            max_layer_size_to_store: int = 1000,
+            max_layer_size_to_explore: int = 10 ** 9,
+            max_diameter: int = 1000000) -> BfsResult:
+        """Runs bread-first search (BFS) algorithm from given `start_states`.
+
+        BFS visits all vertices of the graph in layers, where next layer contains vertices adjacent to previous layer
+        that were not visited before. As a result, we get all vertices grouped by their distance from the set of initial
+        states.
 
         :param start_states: states on 0-th layer of BFS. Defaults to destination state of the graph.
-        :param max_layers: maximal number of BFS iterations.
-        :return: BfsGrowthResult object with requested BFS results.
+        :param max_layer_size_to_store: maximal size of layer to store. First and last layers are always stored.
+        :param max_layer_size_to_explore: if reaches layer of larger size, will stop the BFS.
+        :param max_diameter: maximal number of BFS iterations.
+        :return: BfsResult object with requested BFS results.
         """
         assert self.generators_inverse_closed, "BFS is supported only when generators are inverse-closed."
         start_states = self._encode_states(start_states or self.destination_state)
         layer0_hashes = torch.empty((0,), dtype=torch.int64, device=self.device)
         layer1, layer1_hashes, _ = self.get_unique_states_2(start_states)
         layer_sizes = [len(layer1)]
+        layers = {0: self._decode_states(layer1)}
+        full_graph_explored = False
 
-        for i in range(1, max_layers):
+        for i in range(1, max_diameter + 1):
+            # layer2 := neighbors(layer1)-layer0-layer1
             layer2, layer2_hashes = self._get_unique_neighbors_and_hashes_batched(layer1)
-
-            # layer2 -= (layer0+layer1)
-            # Warning: hash collisions are not handled.
             mask0 = ~torch.isin(layer2_hashes, layer0_hashes, assume_unique=True)
             mask1 = ~torch.isin(layer2_hashes, layer1_hashes, assume_unique=True)
             mask = mask0 & mask1
@@ -212,16 +222,24 @@ class CayleyGraph:
             layer2_hashes = layer2_hashes[mask]
 
             if len(layer2) == 0:
+                full_graph_explored = True
                 break
             if self.verbose >= 2:
                 print(f"Layer {i}: {len(layer2)} states.")
             layer_sizes.append(len(layer2))
+            if len(layer2) <= max_layer_size_to_store:
+                layers[i] = self._decode_states(layer2)
+            if len(layer2) >= max_layer_size_to_explore:
+                break
+
             layer1 = layer2
             layer0_hashes, layer1_hashes = layer1_hashes, layer2_hashes
 
-        return BfsGrowthResult(layer_sizes=layer_sizes,
-                               diameter=len(layer_sizes),
-                               last_layer=self._decode_states(layer1))
+        if not full_graph_explored and self.verbose > 0:
+            print("BFS stopped before graph was fully explored.")
+
+        layers[len(layer_sizes) - 1] = self._decode_states(layer1)
+        return BfsResult(layer_sizes=layer_sizes, layers=layers, bfs_completed=full_graph_explored)
 
     def _free_memory(self):
         gc.collect()

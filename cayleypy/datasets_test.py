@@ -32,7 +32,6 @@ def test_lrx_coset_growth():
 # Number of elements in coset graph for TopSpin and binary strings is binomial coefficient, for n>=6.
 def test_top_spin_coset_growth():
     for initial_state, layer_sizes in load_dataset("top_spin_coset_growth").items():
-        print(initial_state)
         n = len(initial_state)
         k = initial_state.count('1')
         if n >= 6:

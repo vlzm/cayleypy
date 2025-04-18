@@ -1,7 +1,7 @@
 # TODO: adds Rubik's cubes etc.; support specifying initial state.
 
 
-def get_graph(name, n=0) -> tuple[list[list[int]], list[int]]:
+def prepare_graph(name, n=0) -> tuple[list[list[int]], list[int]]:
     """Returns pre-defined Cayley or Schreier coset graph (defined by generators and destination state).
 
     Supported graphs:
