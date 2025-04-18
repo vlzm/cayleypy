@@ -230,7 +230,7 @@ def test_top_spin_coset_growth():
 
 # To skip slower tests ike this, do `FAST=1 pytest`
 @pytest.mark.skipif(FAST_RUN, reason="slow test")
-def test_cube222_QTM():
+def test_cube222_qtm():
     generators, dest = prepare_graph("cube_2/2/2_6gensQTM")
     graph = CayleyGraph(generators, dest=dest)
     result = graph.bfs()
@@ -241,7 +241,7 @@ def test_cube222_QTM():
 
 
 @pytest.mark.skipif(FAST_RUN, reason="slow test")
-def test_cube222_HTM():
+def test_cube222_htm():
     generators, dest = prepare_graph("cube_2/2/2_9gensHTM")
     graph = CayleyGraph(generators, dest=dest)
     result = graph.bfs()

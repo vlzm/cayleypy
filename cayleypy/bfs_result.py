@@ -8,7 +8,11 @@ import torch
 
 @dataclass(frozen=True)
 class BfsResult:
-    """Result of running breadth-first search on a Schreier coset graph."""
+    """Result of running breadth-first search on a Schreier coset graph.
+
+    Can be used to obtain the graph explicitly. In this case, vertices are numbered sequentially in the order in which
+    they are visited by BFS.
+    """
     bfs_completed: bool  # Whether full graph was explored.
     layer_sizes: list[int]  # i-th element is number of states at distance i from start.
     layers: dict[int, torch.Tensor]  # Explicitly stored states for each layer.
@@ -41,11 +45,12 @@ class BfsResult:
 
     @cached_property
     def num_vertices(self) -> int:
+        """Number of vertices in the graph."""
         return sum(self.layer_sizes)
 
     @cached_property
     def hashes_to_indices_dict(self) -> dict[int, int]:
-        """Remap vertex hashes to indexes."""
+        """Dictionary used to remap vertex hashes to indexes."""
         n = self.num_vertices
         assert self.vertices_hashes is not None, "Run bfs with return_all_hashes=True."
         assert len(self.vertices_hashes) == n
@@ -63,13 +68,9 @@ class BfsResult:
         return np.array([[hashes_to_indices[int(h)] for h in row] for row in self.edges_list_hashes], dtype=np.int64)
 
     def named_undirected_edges(self) -> set[tuple[str, str]]:
-        """asasdsadsd"""
+        """Names for vertices (representing coset elements in readable format)."""
         vn = self.vertex_names
-        ans = set()  # type: set[tuple[str, str]]
-        for i1, i2 in self.edges_list:
-            named_edge = tuple(sorted([vn[i1], vn[i2]]))  # type: tuple[str, str]
-            ans.add(named_edge)
-        return ans
+        return {tuple(sorted([vn[i1], vn[i2]])) for i1, i2 in self.edges_list}  # type: ignore
 
     def incidence_matrix(self) -> np.ndarray:
         """Return incidence matrix as a dense NumPy array."""
@@ -80,6 +81,7 @@ class BfsResult:
 
     @cached_property
     def vertex_names(self) -> list[str]:
+        """Returns names for vertices in the graph."""
         ans = []
         for layer_id in range(len(self.layers)):
             if layer_id not in self.layers:
@@ -87,11 +89,11 @@ class BfsResult:
             ans += self.get_layer(layer_id)
         return ans
 
-    def to_networkx_graph(self):
-        import networkx as nx
-        """Returns explicit graph."""
+    def to_networkx_graph(self, directed=False):
+        """Returns explicit graph as networkx.Graph or networkx.DiGraph."""
+        import networkx  # So we don't need to depend on this library in requirements.
         vertex_names = self.vertex_names
-        ans = nx.DiGraph()
+        ans = networkx.DiGraph() if directed else networkx.Graph()
         for name in vertex_names:
             ans.add_node(name)
         for i1, i2 in self.edges_list:

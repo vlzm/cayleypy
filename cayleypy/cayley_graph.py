@@ -114,7 +114,7 @@ class CayleyGraph:
     def get_unique_states(self,
                           states: torch.Tensor,
                           hashes: Optional[torch.Tensor] = None) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        """Removes duplicates from `states`. Changes order."""
+        """Removes duplicates from `states`. May change order."""
         if hashes is None:
             hashes = self.hasher.make_hashes(states)
         hashes_sorted, idx = torch.sort(hashes, stable=True)
