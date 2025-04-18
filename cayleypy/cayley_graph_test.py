@@ -3,7 +3,6 @@ import os
 import numpy as np
 import pytest
 import torch
-from mypyc.ir.ops import Assign
 
 from cayleypy import CayleyGraph, prepare_graph, load_dataset
 

@@ -7,8 +7,8 @@ import torch
 
 from .bfs_result import BfsResult
 from .hasher import StateHasher
-from .string_encoder import StringEncoder
 from .permutation_utils import *
+from .string_encoder import StringEncoder
 
 
 class CayleyGraph:
