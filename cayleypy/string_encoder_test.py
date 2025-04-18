@@ -8,9 +8,6 @@ from .permutation_utils import apply_permutation
 from .string_encoder import StringEncoder
 
 
-
-
-
 @pytest.mark.parametrize("code_width,n", [(1, 2), (1, 5), (2, 30), (10, 100)])
 def test_encode_decode(code_width, n):
     num_states = 5
@@ -25,7 +22,7 @@ def test_encode_decode(code_width, n):
 def test_permutation(code_width: int, n: int):
     num_states = 5
     s = torch.randint(0, 2 ** code_width, (num_states, n), dtype=torch.int64)
-    perm = np.random.permutation(n)
+    perm = list(np.random.permutation(n))
     expected = torch.tensor([apply_permutation(perm, row) for row in s.numpy()], dtype=torch.int64)
     enc = StringEncoder(code_width=code_width, n=n)
     s_encoded = enc.encode(s)

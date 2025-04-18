@@ -207,7 +207,9 @@ class CayleyGraph:
         :param return_all_hashes: whether to return hashes for all vertices (uses more memory).
         :return: BfsResult object with requested BFS results.
         """
+        # This version of BFS is correct only for undirected graph.
         assert self.generators_inverse_closed, "BFS is supported only when generators are inverse-closed."
+
         start_states = self._encode_states(start_states or self.destination_state)
         layer0_hashes = torch.empty((0,), dtype=torch.int64, device=self.device)
         layer1, layer1_hashes, _ = self.get_unique_states(start_states)
@@ -271,6 +273,8 @@ class CayleyGraph:
             edges_list_hashes=edges_list_hashes)
 
     def _free_memory(self):
+        if self.verbose >= 1:
+            print("Freeing memory...")
         gc.collect()
         if self.device.type == 'cuda':
             torch.cuda.empty_cache()

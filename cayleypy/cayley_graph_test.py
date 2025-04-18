@@ -153,15 +153,42 @@ def test_free_memory():
     assert result.layer_sizes == load_dataset("lrx_cayley_growth")["8"]
 
 
-def test_get_neighbors():
+@pytest.mark.parametrize("bit_encoding_width", [None, 5])
+def test_get_neighbors(bit_encoding_width):
     # Directly check _get_neighbors_batched.
-    # It should go over the generators in outer loop, and over the states in inner loop.
-    # We rely on this convention when building list of edges.
-    graph = CayleyGraph([[1, 0, 2, 3, 4], [0, 1, 2, 4, 3]], bit_encoding_width=5)  # 5
+    # In what order it generates neighbours is an implementation detail. However, we rely on this convention when
+    # generating the edges list.
+    graph = CayleyGraph([[1, 0, 2, 3, 4], [0, 1, 2, 4, 3]], bit_encoding_width=bit_encoding_width)
     states = graph._encode_states(torch.tensor([[10, 11, 12, 13, 14], [15, 16, 17, 18, 19]], dtype=torch.int64))
     result = graph._decode_states(graph._get_neighbors_batched(states))
-    assert torch.equal(result, torch.tensor(
-        [[11, 10, 12, 13, 14], [16, 15, 17, 18, 19], [10, 11, 12, 14, 13], [15, 16, 17, 19, 18]]))
+    if bit_encoding_width == 5:
+        # When using StringEncoder, we go over the generators in outer loop, and over the states in inner loop.
+        assert torch.equal(result, torch.tensor(
+            [[11, 10, 12, 13, 14], [16, 15, 17, 18, 19], [10, 11, 12, 14, 13], [15, 16, 17, 19, 18]]))
+    else:
+        # When operating on ints directly, it's the other way around.
+        assert torch.equal(result, torch.tensor(
+            [[11, 10, 12, 13, 14], [10, 11, 12, 14, 13], [16, 15, 17, 18, 19], [15, 16, 17, 19, 18]]))
+
+
+def test_edges_list_n2():
+    graph = CayleyGraph(prepare_graph("lrx", n=2)[0], dest="01")
+    result = graph.bfs(return_all_edges=True, return_all_hashes=True)
+    assert result.named_undirected_edges() == {('01', '10')}
+
+
+def test_edges_list_n3():
+    graph = CayleyGraph(prepare_graph("lrx", n=3)[0], dest="001")
+    result = graph.bfs(return_all_edges=True, return_all_hashes=True)
+    assert result.named_undirected_edges() == {('001', '001'), ('001', '010'), ('001', '100'), ('010', '100')}
+
+
+def test_edges_list_n4():
+    graph = CayleyGraph(prepare_graph("top_spin", n=4)[0], dest="0011")
+    result = graph.bfs(return_all_edges=True, return_all_hashes=True)
+    assert result.named_undirected_edges() == {
+        ('0011', '0110'), ('0011', '1001'), ('0011', '1100'), ('0110', '0110'), ('0110', '1100'), ('1001', '1001'),
+        ('1001', '1100')}
 
 
 # Tests below compare growth function for small graphs with stored pre-computed results.

@@ -40,7 +40,7 @@ def prepare_graph(name, n=0) -> tuple[list[list[int]], list[int]]:
     elif name == "cube_2/2/2_9gensHTM":
         generators = list(CUBE222_ALLOWED_MOVES.values())
         for move_id in ['f0', 'r1', 'd0']:
-            generators.append(compose_permutations(CUBE222_ALLOWED_MOVES[move_id],CUBE222_ALLOWED_MOVES[move_id]))
+            generators.append(compose_permutations(CUBE222_ALLOWED_MOVES[move_id], CUBE222_ALLOWED_MOVES[move_id]))
         initial_state = [color for color in range(6) for _ in range(4)]
         return list(generators), initial_state
     else:

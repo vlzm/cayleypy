@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from functools import cached_property
 from typing import Optional
-import networkx as nx
 
 import numpy as np
 import torch
@@ -61,9 +60,17 @@ class BfsResult:
         """Return list of edges, with vertices renumbered."""
         assert self.edges_list_hashes is not None, "Run bfs with return_all_edges=True."
         hashes_to_indices = self.hashes_to_indices_dict
-        return np.array([[hashes_to_indices[int(h)] for h in row] for row in self.edges_list_hashes])
+        return np.array([[hashes_to_indices[int(h)] for h in row] for row in self.edges_list_hashes], dtype=np.int64)
 
-    @cached_property
+    def named_undirected_edges(self) -> set[tuple[str, str]]:
+        """asasdsadsd"""
+        vn = self.vertex_names
+        ans = set()  # type: set[tuple[str, str]]
+        for i1, i2 in self.edges_list:
+            named_edge = tuple(sorted([vn[i1], vn[i2]]))  # type: tuple[str, str]
+            ans.add(named_edge)
+        return ans
+
     def incidence_matrix(self) -> np.ndarray:
         """Return incidence matrix as a dense NumPy array."""
         ans = np.zeros((self.num_vertices, self.num_vertices), dtype=np.int8)
@@ -71,18 +78,22 @@ class BfsResult:
             ans[i1, i2] = 1
         return ans
 
-    def to_networkx_graph(self) -> nx.DiGraph:
-        """Returns explicit graph."""
-        ans = nx.DiGraph()
-        id_to_name: dict[int, str] = dict()
-        i = 0
+    @cached_property
+    def vertex_names(self) -> list[str]:
+        ans = []
         for layer_id in range(len(self.layers)):
             if layer_id not in self.layers:
                 raise ValueError("To get explicit graph, run bfs with max_layer_size_to_store=None.")
-            for state_name in self.get_layer(layer_id):
-                ans.add_node(state_name)
-                id_to_name[i] = state_name
-                i += 1
+            ans += self.get_layer(layer_id)
+        return ans
+
+    def to_networkx_graph(self):
+        import networkx as nx
+        """Returns explicit graph."""
+        vertex_names = self.vertex_names
+        ans = nx.DiGraph()
+        for name in vertex_names:
+            ans.add_node(name)
         for i1, i2 in self.edges_list:
-            ans.add_edge(id_to_name[i1], id_to_name[i2])
+            ans.add_edge(vertex_names[i1], vertex_names[i2])
         return ans
