@@ -3,6 +3,7 @@ import os
 import numpy as np
 import pytest
 import torch
+from mypyc.ir.ops import Assign
 
 from cayleypy import CayleyGraph, prepare_graph, load_dataset
 
@@ -185,6 +186,13 @@ def test_edges_list_n4():
     assert result.named_undirected_edges() == {
         ('0011', '0110'), ('0011', '1001'), ('0011', '1100'), ('0110', '0110'), ('0110', '1100'), ('1001', '1001'),
         ('1001', '1100')}
+
+
+def test_generators_not_inverse_closed():
+    graph = CayleyGraph([[1, 2, 3, 0]])
+    assert not graph.generators_inverse_closed
+    with pytest.raises(AssertionError):
+        graph.bfs()
 
 
 # Tests below compare growth function for small graphs with stored pre-computed results.
