@@ -37,8 +37,8 @@ def test_bfs_growth_swap():
     result = graph.bfs()
     assert result.layer_sizes == [1, 1]
     assert result.diameter() == 1
-    assert result.get_layer(0) == {"01"}
-    assert result.get_layer(1) == {"10"}
+    assert result.get_layer(0) == ["01"]
+    assert result.get_layer(1) == ["10"]
 
 
 def test_bfs_lrx_coset_5():
@@ -47,10 +47,10 @@ def test_bfs_lrx_coset_5():
     assert ans.bfs_completed
     assert ans.diameter() == 6
     assert ans.layer_sizes == [1, 3, 5, 8, 7, 5, 1]
-    assert ans.get_layer(0) == {"01210"}
-    assert ans.get_layer(1) == {"00121", "10210", "12100"}
-    assert ans.get_layer(5) == {"00112", "01120", "01201", "02011", "11020"}
-    assert ans.get_layer(6) == {"10201"}
+    assert ans.get_layer(0) == ["01210"]
+    assert set(ans.get_layer(1)) == {"00121", "10210", "12100"}
+    assert set(ans.get_layer(5)) == {"00112", "01120", "01201", "02011", "11020"}
+    assert ans.get_layer(6) == ["10201"]
 
 
 def test_bfs_lrx_coset_10():
@@ -58,11 +58,11 @@ def test_bfs_lrx_coset_10():
     ans = graph.bfs()
     assert ans.diameter() == 17
     assert ans.layer_sizes == [1, 3, 4, 6, 11, 16, 19, 23, 31, 29, 20, 14, 10, 10, 6, 3, 3, 1]
-    assert ans.get_layer(0) == {"0110110110"}
-    assert ans.get_layer(1) == {"0011011011", "1010110110", "1101101100"}
-    assert ans.get_layer(15) == {"0001111110", "0111111000", "1110000111"}
-    assert ans.get_layer(16) == {"0011111100", "1111000011", "1111110000"}
-    assert ans.get_layer(17) == {"1111100001"}
+    assert ans.get_layer(0) == ["0110110110"]
+    assert set(ans.get_layer(1)) == {"0011011011", "1010110110", "1101101100"}
+    assert set(ans.get_layer(15)) == {"0001111110", "0111111000", "1110000111"}
+    assert set(ans.get_layer(16)) == {"0011111100", "1111000011", "1111110000"}
+    assert ans.get_layer(17) == ["1111100001"]
 
 
 def test_bfs_max_radius():
@@ -113,13 +113,13 @@ def test_bfs_lrx_n40_layers5(bit_encoding_width):
 def test_bfs_last_layer_lrx_n8():
     generators, dest = prepare_graph("lrx", n=8)
     graph = CayleyGraph(generators, dest=dest)
-    assert graph.bfs().last_layer() == {"10765432"}
+    assert graph.bfs().last_layer() == ["10765432"]
 
 
 def test_bfs_last_layer_lrx_coset_n8():
     generators, _ = prepare_graph("lrx", n=8)
     graph = CayleyGraph(generators, dest="01230123")
-    assert graph.bfs().last_layer() == {"11003322", "22110033", "33221100", "00332211"}
+    assert set(graph.bfs().last_layer()) == {"11003322", "22110033", "33221100", "00332211"}
 
 
 @pytest.mark.parametrize("bit_encoding_width", [None, 3, 10, 'auto'])
@@ -184,6 +184,15 @@ def test_top_spin_coset_growth():
         result = CayleyGraph(generators, dest=initial_state).bfs()
         assert result.layer_sizes == expected[initial_state]
 
+
+def test_get_neighbors():
+    # Directly check _get_neighbors_batched.
+    # It should go over the generators in outer loop, and over the states in inner loop.
+    # We rely on this convention when building list of edges.
+    graph = CayleyGraph([[1,0,2,3,4], [0,1,2,4,3]], bit_encoding_width=5) # 5
+    states = graph._encode_states(torch.tensor([[10,11,12,13,14], [15,16,17,18,19]], dtype=torch.int64))
+    result = graph._decode_states(graph._get_neighbors_batched(states))
+    assert torch.equal(result, torch.tensor([[11,10,12,13,14],[16,15,17,18,19],[10,11,12,14,13],[15,16,17,19,18]]))
 
 # Below is the benchmark code. To tun: `BENCHMARK=1 pytest . -k benchmark`
 BENCHMARK_RUN = os.getenv("BENCHMARK") == "1"

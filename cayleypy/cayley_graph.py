@@ -111,35 +111,21 @@ class CayleyGraph:
 
         self.hasher = StateHasher(encoded_state_size, random_seed, self.device, chunk_size=hash_chunk_size)
 
-    def get_unique_states_2(self, states: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        '''
-        Return matrix with unique rows for input matrix "states"
-        I.e. duplicate rows are dropped.
-        For fast implementation: we use hashing via scalar/dot product.
-        Note: output order of rows is different from the original.
-        '''
-        # Note: that implementation is 30 times faster than torch.unique(states, dim = 0) - because we use hashes
-        # (see K.Khoruzhii: https://t.me/sberlogasci/10989/15920)
-        # Note: torch.unique does not support returning of indices of unique element so we cannot use it
-        # That is in contrast to numpy.unique which supports - set: return_index = True
-
-        # Hashing rows of states matrix:
-        hashes = self.hasher.make_hashes(states)
-
-        # sort
+    def get_unique_states(self,
+                          states: torch.Tensor,
+                          hashes: Optional[torch.Tensor] = None) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Removes duplicates from `states`. Changes order."""
+        if hashes is None:
+            hashes = self.hasher.make_hashes(states)
         hashes_sorted, idx = torch.sort(hashes, stable=True)
 
-        # Mask initialization
+        # Compute mask of first occurrences for each unique value.
         mask = torch.ones(hashes_sorted.size(0), dtype=torch.bool, device=self.device)
-
-        # Mask main part:
         if hashes_sorted.size(0) > 1:
             mask[1:] = (hashes_sorted[1:] != hashes_sorted[:-1])
 
-        # Update index
-        IX1 = idx[mask]
-
-        return states[IX1], hashes[IX1], IX1
+        unique_idx = idx[mask]
+        return states[unique_idx], hashes[unique_idx], unique_idx
 
     def _encode_states(self, states: torch.Tensor | np.ndarray | list) -> torch.Tensor:
         states = torch.as_tensor(states, device=self.device)
@@ -171,7 +157,7 @@ class CayleyGraph:
                 moves.unsqueeze(0).expand(states.size(0), moves.shape[0], states.size(1))
             ).flatten(end_dim=1)
 
-    def _get_unique_neighbors_and_hashes_batched(self, states: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+    def _get_neighbors_batched(self, states: torch.Tensor) -> torch.Tensor:
         estimated_result_size = states.shape[0] * states.shape[1] * self.n_generators * 8
         if 5 * estimated_result_size > self.memory_limit_bytes:
             self._free_memory()
@@ -179,7 +165,6 @@ class CayleyGraph:
         if states.shape[0] <= self.batch_size:
             neighbors = torch.zeros((states.shape[0] * self.n_generators, states.shape[1]), dtype=torch.int64)
             self._get_neighbors(states, neighbors)
-            neighbors, nb_hashes, _ = self.get_unique_states_2(neighbors)
         else:
             num_batches = int(math.ceil(states.shape[0] / self.batch_size))
             neighbors = torch.zeros((self.n_generators * states.shape[0], states.shape[1]), dtype=torch.int64)
@@ -188,15 +173,17 @@ class CayleyGraph:
                 num_neighbors = self.n_generators * batch.shape[0]
                 self._get_neighbors(batch, neighbors[i:i + num_neighbors, :])
                 i += num_neighbors
-            neighbors, nb_hashes, _ = self.get_unique_states_2(neighbors)
-        return neighbors, nb_hashes
+        return neighbors
 
     def bfs(self,
             *,
             start_states: None | torch.Tensor | np.ndarray | list = None,
-            max_layer_size_to_store: int = 1000,
+            max_layer_size_to_store: Optional[int] = 1000,
             max_layer_size_to_explore: int = 10 ** 9,
-            max_diameter: int = 1000000) -> BfsResult:
+            max_diameter: int = 1000000,
+            return_all_edges: bool = False,
+            return_all_hashes: bool = False,
+            ) -> BfsResult:
         """Runs bread-first search (BFS) algorithm from given `start_states`.
 
         BFS visits all vertices of the graph in layers, where next layer contains vertices adjacent to previous layer
@@ -204,22 +191,40 @@ class CayleyGraph:
         states.
 
         :param start_states: states on 0-th layer of BFS. Defaults to destination state of the graph.
-        :param max_layer_size_to_store: maximal size of layer to store. First and last layers are always stored.
+        :param max_layer_size_to_store: maximal size of layer to store.
+               If None, all layers will be stored (use this if you need full graph).
+               Defaults to 1000.
+               First and last layers are always stored.
         :param max_layer_size_to_explore: if reaches layer of larger size, will stop the BFS.
         :param max_diameter: maximal number of BFS iterations.
+        :param return_all_edges: whether to return list of all edges (uses more memory).
+        :param return_all_hashes: whether to return hashes for all vertices (uses more memory).
         :return: BfsResult object with requested BFS results.
         """
         assert self.generators_inverse_closed, "BFS is supported only when generators are inverse-closed."
         start_states = self._encode_states(start_states or self.destination_state)
         layer0_hashes = torch.empty((0,), dtype=torch.int64, device=self.device)
-        layer1, layer1_hashes, _ = self.get_unique_states_2(start_states)
+        layer1, layer1_hashes, _ = self.get_unique_states(start_states)
         layer_sizes = [len(layer1)]
         layers = {0: self._decode_states(layer1)}
         full_graph_explored = False
+        edges_list_starts = []
+        edges_list_ends = []
+        all_layers_hashes = []
 
         for i in range(1, max_diameter + 1):
             # layer2 := neighbors(layer1)-layer0-layer1
-            layer2, layer2_hashes = self._get_unique_neighbors_and_hashes_batched(layer1)
+            layer1_neighbors = self._get_neighbors_batched(layer1)
+            layer1_neighbors_hashes = self.hasher.make_hashes(layer1_neighbors)
+            if return_all_edges:
+                if self.string_encoder is not None:
+                    edges_list_starts += [layer1_hashes] * self.n_generators
+                else:
+                    edges_list_starts.append(layer1_hashes.repeat_interleave(self.n_generators))
+                edges_list_ends.append(layer1_neighbors_hashes)
+            if return_all_hashes:
+                all_layers_hashes.append(layer1_hashes)
+            layer2, layer2_hashes, _ = self.get_unique_states(layer1_neighbors, hashes=layer1_neighbors_hashes)
             mask0 = ~torch.isin(layer2_hashes, layer0_hashes, assume_unique=True)
             mask1 = ~torch.isin(layer2_hashes, layer1_hashes, assume_unique=True)
             mask = mask0 & mask1
@@ -243,8 +248,21 @@ class CayleyGraph:
         if not full_graph_explored and self.verbose > 0:
             print("BFS stopped before graph was fully explored.")
 
+        edges_list_hashes: Optional[torch.Tensor] = None
+        if return_all_edges:
+            edges_list_hashes = torch.vstack([torch.hstack(edges_list_starts), torch.hstack(edges_list_ends)]).T
+        vertices_hashes: Optional[torch.Tensor] = None
+        if return_all_hashes:
+            vertices_hashes = torch.hstack(all_layers_hashes)
+
         layers[len(layer_sizes) - 1] = self._decode_states(layer1)
-        return BfsResult(layer_sizes=layer_sizes, layers=layers, bfs_completed=full_graph_explored)
+
+        return BfsResult(
+            layer_sizes=layer_sizes,
+            layers=layers,
+            bfs_completed=full_graph_explored,
+            vertices_hashes=vertices_hashes,
+            edges_list_hashes=edges_list_hashes)
 
     def _free_memory(self):
         gc.collect()

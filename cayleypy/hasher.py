@@ -5,6 +5,7 @@ import torch
 
 
 class StateHasher:
+    """Helper class to hash states by multiplying them by random vector."""
     def __init__(self, state_size: int, random_seed: Optional[int], device: torch.device, chunk_size=2 ** 18):
         self.state_size = state_size
         self.chunk_size = chunk_size
