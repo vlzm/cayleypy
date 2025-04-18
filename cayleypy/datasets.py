@@ -41,6 +41,9 @@ def _update_dataset(dataset_name: str, keys: list[str], eval_func: Callable[[str
     print(f"Updated: {file_name}")
 
 
+# The code below can be viewed as definition of what is stored in datasets.
+# It is used to compute results for small graphs. Results for larger are computed separately and added to repository
+# manually.
 def _compute_lrx_coset_growth(initial_state: str) -> list[int]:
     n = len(initial_state)
     generators, _ = prepare_graph("lrx", n=n)

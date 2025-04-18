@@ -221,7 +221,6 @@ class CayleyGraph:
         all_layers_hashes = []
 
         for i in range(1, max_diameter + 1):
-            # layer2 := neighbors(layer1)-layer0-layer1
             layer1_neighbors = self._get_neighbors_batched(layer1)
             layer1_neighbors_hashes = self.hasher.make_hashes(layer1_neighbors)
             if return_all_edges:
@@ -232,6 +231,8 @@ class CayleyGraph:
                 edges_list_ends.append(layer1_neighbors_hashes)
             if return_all_hashes:
                 all_layers_hashes.append(layer1_hashes)
+
+            # BFS iteration: layer2 := neighbors(layer1)-layer0-layer1.
             layer2, layer2_hashes, _ = self.get_unique_states(layer1_neighbors, hashes=layer1_neighbors_hashes)
             mask0 = ~torch.isin(layer2_hashes, layer0_hashes, assume_unique=True)
             mask1 = ~torch.isin(layer2_hashes, layer1_hashes, assume_unique=True)

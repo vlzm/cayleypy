@@ -10,10 +10,6 @@ FAST_RUN = os.getenv("FAST") == "1"
 BENCHMARK_RUN = os.getenv("BENCHMARK") == "1"
 
 
-# TODO: Special tests for returning adjacency matrix.
-# TODO: Test for netwrorkx for small graphs.
-# TODO: Test for set of edges represented by pairs of strings.
-
 def test_generators_format():
     generators = [[1, 2, 0], [2, 0, 1], [1, 0, 2]]
     graph1 = CayleyGraph(generators)
