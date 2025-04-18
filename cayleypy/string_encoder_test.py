@@ -4,11 +4,11 @@ import numpy as np
 import pytest
 import torch
 
+from .permutation_utils import apply_permutation
 from .string_encoder import StringEncoder
 
 
-def _apply_permutation(x, p):
-    return [x[p[i]] for i in range(len(p))]
+
 
 
 @pytest.mark.parametrize("code_width,n", [(1, 2), (1, 5), (2, 30), (10, 100)])
@@ -26,7 +26,7 @@ def test_permutation(code_width: int, n: int):
     num_states = 5
     s = torch.randint(0, 2 ** code_width, (num_states, n), dtype=torch.int64)
     perm = np.random.permutation(n)
-    expected = torch.tensor([_apply_permutation(row, perm) for row in s.numpy()], dtype=torch.int64)
+    expected = torch.tensor([apply_permutation(perm, row) for row in s.numpy()], dtype=torch.int64)
     enc = StringEncoder(code_width=code_width, n=n)
     s_encoded = enc.encode(s)
     result = torch.zeros_like(s_encoded)

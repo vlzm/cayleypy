@@ -6,6 +6,9 @@ import torch
 
 from cayleypy import CayleyGraph, prepare_graph, load_dataset
 
+FAST_RUN = os.getenv("FAST") == "1"
+BENCHMARK_RUN = os.getenv("BENCHMARK") == "1"
+
 
 # TODO: Special tests for returning adjacency matrix.
 # TODO: Test for netwrorkx for small graphs.
@@ -188,16 +191,6 @@ def test_lrx_coset_growth():
         assert result.layer_sizes == expected[initial_state]
 
 
-def test_cube222_QTM():
-    generators, dest = prepare_graph("cube_2/2/2_6gensQTM")
-    graph = CayleyGraph(generators, dest=dest)
-    result = graph.bfs()
-    assert result.num_vertices == 3674160
-    assert result.diameter() == 14
-    assert result.layer_sizes == [
-        1, 6, 27, 120, 534, 2256, 8969, 33058, 114149, 360508, 930588, 1350852, 782536, 90280, 276]
-
-
 def test_top_spin_coset_growth():
     expected = load_dataset("top_spin_coset_growth")
     for initial_state in expected.keys():
@@ -208,10 +201,29 @@ def test_top_spin_coset_growth():
         assert result.layer_sizes == expected[initial_state]
 
 
+# To skip slower tests ike this, do `FAST=1 pytest`
+@pytest.mark.skipif(FAST_RUN, reason="slow test")
+def test_cube222_QTM():
+    generators, dest = prepare_graph("cube_2/2/2_6gensQTM")
+    graph = CayleyGraph(generators, dest=dest)
+    result = graph.bfs()
+    assert result.num_vertices == 3674160
+    assert result.diameter() == 14
+    assert result.layer_sizes == [
+        1, 6, 27, 120, 534, 2256, 8969, 33058, 114149, 360508, 930588, 1350852, 782536, 90280, 276]
+
+
+@pytest.mark.skipif(FAST_RUN, reason="slow test")
+def test_cube222_HTM():
+    generators, dest = prepare_graph("cube_2/2/2_9gensHTM")
+    graph = CayleyGraph(generators, dest=dest)
+    result = graph.bfs()
+    assert result.num_vertices == 3674160
+    assert result.diameter() == 11
+    assert result.layer_sizes == [1, 9, 54, 321, 1847, 9992, 50136, 227536, 870072, 1887748, 623800, 2644]
+
+
 # Below is the benchmark code. To tun: `BENCHMARK=1 pytest . -k benchmark`
-BENCHMARK_RUN = os.getenv("BENCHMARK") == "1"
-
-
 @pytest.mark.skipif(not BENCHMARK_RUN, reason="benchmark")
 @pytest.mark.parametrize("benchmark_mode", ["baseline", "bit_encoded"])
 @pytest.mark.parametrize("n", [28])
