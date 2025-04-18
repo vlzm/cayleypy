@@ -105,7 +105,7 @@ class CayleyGraph:
         self.string_encoder: Optional[StringEncoder] = None
         encoded_state_size: int = self.state_size
         if bit_encoding_width is not None:
-            self.string_encoder = StringEncoder(code_width=bit_encoding_width, n=self.state_size)
+            self.string_encoder = StringEncoder(code_width=int(bit_encoding_width), n=self.state_size)
             self.encoded_generators = [self.string_encoder.implement_permutation(perm) for perm in generators]
             encoded_state_size = self.string_encoder.encoded_length
 
@@ -178,7 +178,7 @@ class CayleyGraph:
     def bfs(self,
             *,
             start_states: None | torch.Tensor | np.ndarray | list = None,
-            max_layer_size_to_store: Optional[int] = 1000,
+            max_layer_size_to_store: int = 1000,
             max_layer_size_to_explore: int = 10 ** 9,
             max_diameter: int = 1000000,
             return_all_edges: bool = False,
@@ -190,10 +190,16 @@ class CayleyGraph:
         that were not visited before. As a result, we get all vertices grouped by their distance from the set of initial
         states.
 
+        Depending on parameters below, it can be used to:
+          * Get growth function (number of vertices at each BFS layer).
+          * Get vertices at some first and last layers.
+          * Get all vertices.
+          * Get all vertices and edges (i.e. get the whole graph explicitly).
+
         :param start_states: states on 0-th layer of BFS. Defaults to destination state of the graph.
         :param max_layer_size_to_store: maximal size of layer to store.
                If None, all layers will be stored (use this if you need full graph).
-               Defaults to 1000.
+               Defaults to 1000. Set to very large number (e.g. 10**12) if you need all vertices explicitly.
                First and last layers are always stored.
         :param max_layer_size_to_explore: if reaches layer of larger size, will stop the BFS.
         :param max_diameter: maximal number of BFS iterations.

@@ -170,7 +170,8 @@ def test_top_spin_cayley_growth():
 def test_lrx_coset_growth():
     expected = load_dataset("lrx_coset_growth")
     for initial_state in expected.keys():
-        if len(initial_state) > 15: continue
+        if len(initial_state) > 15:
+            continue
         generators, _ = prepare_graph("lrx", n=len(initial_state))
         result = CayleyGraph(generators, dest=initial_state).bfs()
         assert result.layer_sizes == expected[initial_state]
@@ -179,7 +180,8 @@ def test_lrx_coset_growth():
 def test_top_spin_coset_growth():
     expected = load_dataset("top_spin_coset_growth")
     for initial_state in expected.keys():
-        if len(initial_state) > 15: continue
+        if len(initial_state) > 15:
+            continue
         generators, _ = prepare_graph("top_spin", n=len(initial_state))
         result = CayleyGraph(generators, dest=initial_state).bfs()
         assert result.layer_sizes == expected[initial_state]
@@ -189,10 +191,12 @@ def test_get_neighbors():
     # Directly check _get_neighbors_batched.
     # It should go over the generators in outer loop, and over the states in inner loop.
     # We rely on this convention when building list of edges.
-    graph = CayleyGraph([[1,0,2,3,4], [0,1,2,4,3]], bit_encoding_width=5) # 5
-    states = graph._encode_states(torch.tensor([[10,11,12,13,14], [15,16,17,18,19]], dtype=torch.int64))
+    graph = CayleyGraph([[1, 0, 2, 3, 4], [0, 1, 2, 4, 3]], bit_encoding_width=5)  # 5
+    states = graph._encode_states(torch.tensor([[10, 11, 12, 13, 14], [15, 16, 17, 18, 19]], dtype=torch.int64))
     result = graph._decode_states(graph._get_neighbors_batched(states))
-    assert torch.equal(result, torch.tensor([[11,10,12,13,14],[16,15,17,18,19],[10,11,12,14,13],[15,16,17,19,18]]))
+    assert torch.equal(result, torch.tensor(
+        [[11, 10, 12, 13, 14], [16, 15, 17, 18, 19], [10, 11, 12, 14, 13], [15, 16, 17, 19, 18]]))
+
 
 # Below is the benchmark code. To tun: `BENCHMARK=1 pytest . -k benchmark`
 BENCHMARK_RUN = os.getenv("BENCHMARK") == "1"

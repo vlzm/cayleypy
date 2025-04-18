@@ -3,8 +3,7 @@ import csv
 import functools
 import json
 import os
-
-from typing import Callable
+from typing import Any, Callable
 
 from .cayley_graph import CayleyGraph
 from .graphs_lib import prepare_graph
@@ -27,41 +26,41 @@ def load_dataset(dataset_name: str, error_if_not_found=True) -> dict[str, str]:
     return data
 
 
-def _update_dataset(dataset_name: str, keys: list[str], eval_func: Callable[[str], any]):
+def _update_dataset(dataset_name: str, keys: list[str], eval_func: Callable[[str], Any]):
     file_name = os.path.join(DATA_DIR, dataset_name + '.csv')
     data = load_dataset(dataset_name, error_if_not_found=False)
     for key in keys:
         if key not in data:
             data[key] = json.dumps(eval_func(key))
-    data = [(key, value) for key, value in data.items()]
-    data.sort(key=lambda x: (len(x[0]), x[0]))
+    rows = [(key, value) for key, value in data.items()]
+    rows.sort(key=lambda x: (len(x[0]), x[0]))
     with open(file_name, "w") as csvfile:
         writer = csv.writer(csvfile)
-        for row in data:
+        for row in rows:
             writer.writerow(row)
     print(f"Updated: {file_name}")
 
 
-def _compute_lrx_coset_growth(initial_state: str) -> any:
+def _compute_lrx_coset_growth(initial_state: str) -> list[int]:
     n = len(initial_state)
     generators, _ = prepare_graph("lrx", n=n)
     result = CayleyGraph(generators, dest=initial_state).bfs()
     return result.layer_sizes
 
 
-def _compute_top_spin_coset_growth(initial_state: str) -> any:
+def _compute_top_spin_coset_growth(initial_state: str) -> list[int]:
     n = len(initial_state)
     generators, _ = prepare_graph("top_spin", n=n)
     result = CayleyGraph(generators, dest=initial_state).bfs()
     return result.layer_sizes
 
 
-def _compute_lrx_cayley_growth(n: str) -> any:
+def _compute_lrx_cayley_growth(n: str) -> list[int]:
     generators, _ = prepare_graph("lrx", n=int(n))
     return CayleyGraph(generators).bfs().layer_sizes
 
 
-def _compute_top_spin_cayley_growth(n: str) -> any:
+def _compute_top_spin_cayley_growth(n: str) -> list[int]:
     generators, _ = prepare_graph("top_spin", n=int(n))
     return CayleyGraph(generators).bfs().layer_sizes
 
