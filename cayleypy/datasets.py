@@ -15,6 +15,7 @@ DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
 def load_dataset(dataset_name: str, error_if_not_found=True) -> dict[str, str]:
     """Loads named dataset."""
     file_name = os.path.join(DATA_DIR, dataset_name + '.csv')
+    print("file_name", file_name)
     data: dict[str, str] = dict()
     if os.path.exists(file_name):
         with open(file_name, "r") as csvfile:
