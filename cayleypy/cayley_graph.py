@@ -9,7 +9,6 @@ from .bfs_result import BfsResult
 from .hasher import StateHasher
 from .permutation_utils import *
 from .string_encoder import StringEncoder
-from .utils import isin_via_searchsorted
 
 
 class CayleyGraph:
@@ -216,7 +215,7 @@ class CayleyGraph:
         assert self.generators_inverse_closed, "BFS is supported only when generators are inverse-closed."
 
         start_states = self._encode_states(start_states or self.destination_state)
-        layer0_hashes = torch.empty((1,), dtype=torch.int64, device=self.device)
+        layer0_hashes = torch.empty((0,), dtype=torch.int64, device=self.device)
         layer1, layer1_hashes, _ = self.get_unique_states(start_states)
         layer_sizes = [len(layer1)]
         layers = {0: self._decode_states(layer1)}
@@ -239,8 +238,8 @@ class CayleyGraph:
 
             # BFS iteration: layer2 := neighbors(layer1)-layer0-layer1.
             layer2, layer2_hashes, _ = self.get_unique_states(layer1_neighbors, hashes=layer1_neighbors_hashes)
-            mask = ~isin_via_searchsorted(layer2_hashes, layer0_hashes)
-            mask &= ~isin_via_searchsorted(layer2_hashes, layer1_hashes)
+            mask = ~torch.isin(layer2_hashes, layer0_hashes)
+            mask &= ~torch.isin(layer2_hashes, layer1_hashes)
             layer2 = layer2[mask]
             layer2_hashes = self.hasher.make_hashes(layer2) if self.hasher.is_identity else layer2_hashes[mask]
 
