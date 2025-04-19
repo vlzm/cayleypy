@@ -167,7 +167,7 @@ class CayleyGraph:
         if 5 * estimated_result_size > self.memory_limit_bytes:
             self._free_memory()
 
-        if states.shape[0] <= self.batch_size:
+        if self.string_encoder is not None or states.shape[0] <= self.batch_size:
             neighbors = torch.zeros((states.shape[0] * self.n_generators, states.shape[1]), dtype=torch.int64)
             self._get_neighbors(states, neighbors)
         else:
