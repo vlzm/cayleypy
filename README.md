@@ -62,4 +62,4 @@ Also, code from the following Kaggle notebooks was used:
 * https://www.kaggle.com/code/avm888/cayleypy-growth-function.
 * https://www.kaggle.com/code/avm888/jax-version-cayleypy (how to use JAX).
 * https://www.kaggle.com/code/fedimser/bfs-for-binary-string-permutations (bit operations).
-
+* https://www.kaggle.com/code/ivankolt/lrx-4bit-uint64?scriptVersionId=221435319 (fast BFS)

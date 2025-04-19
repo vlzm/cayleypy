@@ -31,3 +31,15 @@ def test_permutation(code_width: int, n: int):
     perm_func(s_encoded, result)
     ans = enc.decode(result)
     assert torch.equal(ans, expected)
+
+
+@pytest.mark.parametrize("code_width,n", [(1, 2), (1, 5), (2, 30)])
+def test_permutation_1d(code_width: int, n: int):
+    num_states = 5
+    s = torch.randint(0, 2 ** code_width, (num_states, n), dtype=torch.int64)
+    perm = list(np.random.permutation(n))
+    expected = torch.tensor([apply_permutation(perm, row) for row in s.numpy()], dtype=torch.int64)
+    enc = StringEncoder(code_width=code_width, n=n)
+    perm_func = enc.implement_permutation_1d(perm)
+    ans = enc.decode(perm_func(enc.encode(s)))
+    assert torch.equal(ans, expected)

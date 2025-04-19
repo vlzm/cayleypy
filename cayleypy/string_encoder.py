@@ -57,11 +57,7 @@ class StringEncoder:
             orig[:, i // w] |= ((encoded[:, i // cl] >> (i % cl)) & 1) << (i % w)
         return orig
 
-    def implement_permutation(self, p: Sequence[int] | np.ndarray) -> Callable[[torch.Tensor, torch.Tensor], None]:
-        """Converts permutation to a function on encoded tensor implementing this permutation.
-
-        This function writes result to tensor in second argument, which must be initialized to zeros.
-        """
+    def prepare_shift_to_mask(self, p: list[int]):
         assert len(p) == self.n
         shift_to_mask: dict[tuple[int, int, int], np.int64] = dict()
         for i in range(self.n):
@@ -75,7 +71,14 @@ class StringEncoder:
                 if key not in shift_to_mask:
                     shift_to_mask[key] = np.int64(0)
                 shift_to_mask[key] |= (np.int64(1) << (start_bit % CODEWORD_LENGTH))
+        return shift_to_mask
 
+    def implement_permutation(self, p: list[int]) -> Callable[[torch.Tensor, torch.Tensor], None]:
+        """Converts permutation to a function on encoded tensor implementing this permutation.
+
+        This function writes result to tensor in second argument, which must be initialized to zeros.
+        """
+        shift_to_mask = self.prepare_shift_to_mask(p)
         lines = ["def f_(x,y):"]
         for (start_cw_id, end_cw_id, shift), mask in shift_to_mask.items():
             line = f" y[:,{end_cw_id}] |= (x[:,{start_cw_id}] & {mask})"
@@ -85,6 +88,27 @@ class StringEncoder:
                 line += f">>{-shift}"
             lines.append(line)
         src = "\n".join(lines)
+        l: dict = {}
+        exec(src, {}, l)
+        return l["f_"]
+
+    def implement_permutation_1d(self, p: list[int]) -> Callable[[torch.Tensor], torch.Tensor]:
+        """Converts permutation to a function on encoded tensor implementing this permutation.
+
+        The function converts 1D tensor to 1D tensor of the same dimension.
+        Applicable only if state can be encoded by single int64 (encoded_length=1).
+        """
+        assert self.encoded_length == 1
+        shift_to_mask = self.prepare_shift_to_mask(p)
+        terms = []
+        for (_, _, shift), mask in shift_to_mask.items():
+            term = f"(x&{mask})"
+            if shift > 0:
+                term += f"<<{shift}"
+            elif shift < 0:
+                term += f">>{-shift}"
+            terms.append(f"({term})")
+        src = "f_ = lambda x: " + " | ".join(terms)
         l: dict = {}
         exec(src, {}, l)
         return l["f_"]
