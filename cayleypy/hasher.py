@@ -12,9 +12,11 @@ class StateHasher:
 
         # If states are already encoded by a single int64, use identity function as hash function.
         self.make_hashes: Callable[[torch.Tensor], torch.Tensor] = lambda x: x.reshape(-1)
+        self.is_identity = True
         if state_size == 1:
             return
 
+        self.is_identity = False
         if random_seed is not None:
             torch.manual_seed(random_seed)
         max_int = int((2 ** 62))

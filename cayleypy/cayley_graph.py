@@ -9,6 +9,7 @@ from .bfs_result import BfsResult
 from .hasher import StateHasher
 from .permutation_utils import *
 from .string_encoder import StringEncoder
+from .utils import is_not_in
 
 
 class CayleyGraph:
@@ -127,7 +128,9 @@ class CayleyGraph:
             mask[1:] = (hashes_sorted[1:] != hashes_sorted[:-1])
 
         unique_idx = idx[mask]
-        return states[unique_idx], hashes[unique_idx], unique_idx
+        unique_states = states[unique_idx]
+        unique_hashes = self.hasher.make_hashes(unique_states) if self.hasher.is_identity else hashes[unique_idx]
+        return unique_states, unique_hashes, unique_idx
 
     def _encode_states(self, states: torch.Tensor | np.ndarray | list) -> torch.Tensor:
         states = torch.as_tensor(states, device=self.device)
@@ -213,7 +216,7 @@ class CayleyGraph:
         assert self.generators_inverse_closed, "BFS is supported only when generators are inverse-closed."
 
         start_states = self._encode_states(start_states or self.destination_state)
-        layer0_hashes = torch.empty((0,), dtype=torch.int64, device=self.device)
+        layer0_hashes = torch.empty((1,), dtype=torch.int64, device=self.device)
         layer1, layer1_hashes, _ = self.get_unique_states(start_states)
         layer_sizes = [len(layer1)]
         layers = {0: self._decode_states(layer1)}
@@ -236,11 +239,10 @@ class CayleyGraph:
 
             # BFS iteration: layer2 := neighbors(layer1)-layer0-layer1.
             layer2, layer2_hashes, _ = self.get_unique_states(layer1_neighbors, hashes=layer1_neighbors_hashes)
-            mask0 = ~torch.isin(layer2_hashes, layer0_hashes, assume_unique=True)
-            mask1 = ~torch.isin(layer2_hashes, layer1_hashes, assume_unique=True)
-            mask = mask0 & mask1
+            mask = is_not_in(layer2_hashes, layer0_hashes)
+            mask &= is_not_in(layer2_hashes, layer1_hashes)
             layer2 = layer2[mask]
-            layer2_hashes = layer2_hashes[mask]
+            layer2_hashes = self.hasher.make_hashes(layer2) if self.hasher.is_identity else layer2_hashes[mask]
 
             if len(layer2) == 0:
                 full_graph_explored = True
