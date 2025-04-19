@@ -167,11 +167,13 @@ class CayleyGraph:
             self._free_memory()
 
         if self.string_encoder is not None or states.shape[0] <= self.batch_size:
-            neighbors = torch.zeros((states.shape[0] * self.n_generators, states.shape[1]), dtype=torch.int64)
+            neighbors = torch.zeros((states.shape[0] * self.n_generators, states.shape[1]), dtype=torch.int64,
+                                    device=self.device)
             self._get_neighbors(states, neighbors)
         else:
             num_batches = int(math.ceil(states.shape[0] / self.batch_size))
-            neighbors = torch.zeros((self.n_generators * states.shape[0], states.shape[1]), dtype=torch.int64)
+            neighbors = torch.zeros((self.n_generators * states.shape[0], states.shape[1]), dtype=torch.int64,
+                                    device=self.device)
             i = 0
             for batch in states.tensor_split(num_batches, dim=0):
                 num_neighbors = self.n_generators * batch.shape[0]
