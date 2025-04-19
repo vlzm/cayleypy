@@ -22,7 +22,7 @@ def test_encode_decode(code_width, n):
 def test_permutation(code_width: int, n: int):
     num_states = 5
     s = torch.randint(0, 2 ** code_width, (num_states, n), dtype=torch.int64)
-    perm = np.random.permutation(n)
+    perm = [int(x) for x in np.random.permutation(n)]
     expected = torch.tensor([apply_permutation(perm, row) for row in s.numpy()], dtype=torch.int64)
     enc = StringEncoder(code_width=code_width, n=n)
     s_encoded = enc.encode(s)
@@ -37,7 +37,7 @@ def test_permutation(code_width: int, n: int):
 def test_permutation_1d(code_width: int, n: int):
     num_states = 5
     s = torch.randint(0, 2 ** code_width, (num_states, n), dtype=torch.int64)
-    perm = list(np.random.permutation(n))
+    perm = [int(x) for x in np.random.permutation(n)]
     expected = torch.tensor([apply_permutation(perm, row) for row in s.numpy()], dtype=torch.int64)
     enc = StringEncoder(code_width=code_width, n=n)
     perm_func = enc.implement_permutation_1d(perm)
