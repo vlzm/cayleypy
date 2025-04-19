@@ -3,6 +3,7 @@ from typing import Callable, Sequence
 
 import numpy as np
 import torch
+import tensorflow as tf
 
 # We are using int64, but avoid using the sign bit.
 CODEWORD_LENGTH = 63
@@ -111,4 +112,25 @@ class StringEncoder:
         src = "f_ = lambda x: " + " | ".join(terms)
         l: dict = {}
         exec(src, {}, l)
+        return l["f_"]
+
+    def implement_permutation_1d_tf(self, p: list[int]) -> Callable[[tf.Tensor], tf.Tensor]:
+        """Converts permutation to a function on encoded tensor implementing this permutation.
+
+        The function converts 1D tensor to 1D tensor of the same dimension.
+        Applicable only if state can be encoded by single int64 (encoded_length=1).
+        """
+        assert self.encoded_length == 1
+        shift_to_mask = self.prepare_shift_to_mask(p)
+        terms = []
+        for (_, _, shift), mask in shift_to_mask.items():
+            term = f"(x&{mask})"
+            if shift > 0:
+                term = f"tf.bitwise.left_shift({term},{shift})"
+            elif shift < 0:
+                term = f"tf.bitwise.right_shift({term},{-shift})"
+            terms.append(f"({term})")
+        src = "f_ = lambda x: " + " | ".join(terms)
+        l: dict = {}
+        exec(src, {"tf": tf}, l)
         return l["f_"]
