@@ -267,11 +267,15 @@ def test_cube222_htm():
 
 # Below is the benchmark code. To tun: `BENCHMARK=1 pytest . -k benchmark`
 @pytest.mark.skipif(not BENCHMARK_RUN, reason="benchmark")
-@pytest.mark.parametrize("benchmark_mode", ["baseline", "bit_encoded"])
+@pytest.mark.parametrize("benchmark_mode", ["baseline", "bit_encoded", "bfs_numpy"])
 @pytest.mark.parametrize("n", [26])
 def test_benchmark_top_spin(benchmark, benchmark_mode, n):
     generators, _ = prepare_graph("lrx", n=n)
     dest = [0] * (n // 2) + [1] * (n // 2)
-    bit_encoding_width = 1 if benchmark_mode == "bit_encoded" else None
-    graph = CayleyGraph(generators, dest=dest, bit_encoding_width=bit_encoding_width)
-    benchmark.pedantic(lambda: graph.bfs(), iterations=1, rounds=5)
+    if benchmark_mode == "bfs_numpy":
+        graph = CayleyGraph(generators, dest=dest)
+        benchmark.pedantic(lambda: graph.bfs_numpy(), iterations=1, rounds=5)
+    else:
+        bit_encoding_width = 1 if benchmark_mode == "bit_encoded" else None
+        graph = CayleyGraph(generators, dest=dest, bit_encoding_width=bit_encoding_width)
+        benchmark.pedantic(lambda: graph.bfs(), iterations=1, rounds=5)
