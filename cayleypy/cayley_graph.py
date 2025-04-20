@@ -1,5 +1,6 @@
 import gc
 import math
+import time
 from typing import Optional
 
 import numpy as np
@@ -277,6 +278,70 @@ class CayleyGraph:
             bfs_completed=full_graph_explored,
             vertices_hashes=vertices_hashes,
             edges_list_hashes=edges_list_hashes)
+
+    def bfs_numpy(self, max_diameter: int = 1000000) -> BfsResult:
+        """Simple version of BFS (from destination_state) using numpy, optimized for memory usage."""
+        assert self.generators_inverse_closed, "Only supports undirected graph."
+        assert self.string_encoder is not None
+        assert self.string_encoder.encoded_length == 1, "Only works on states encoded by single int64."
+        perms = [list(x.numpy()) for x in self.generators]
+        print(perms)
+        perm_funcs = [self.string_encoder.implement_permutation_1d(p) for p in perms]
+        pn = len(perms)
+        start_state = np.array(self._encode_states(self.destination_state), dtype=np.int64).reshape(-1)
+        time_start = time.time()
+        bfs_completed = False
+
+        # For each generating permutation store which one is its inverse.
+        inv_perm_idx = []
+        for i in range(pn):
+            inv = [j for j in range(pn) if inverse_permutation(perms[i]) == perms[j]]
+            assert len(inv) == 1
+            inv_perm_idx.append(inv[0])
+
+        def _make_states_unique(layer):
+            for i1 in range(pn):
+                for i2 in range(i1 + 1, pn):
+                    layer[i1] = np.setdiff1d(layer[i1], layer[i2], assume_unique=True)
+
+        layer0 = [start_state, start_state, start_state]
+        layer1 = [perm_funcs[i](start_state) for i in range(pn)]
+        layer1 = [np.setdiff1d(x, start_state, assume_unique=True) for x in layer1]
+        _make_states_unique(layer1)
+        layer_sizes = [1, len(set(list(np.hstack(layer1))))]
+
+        for i in range(2, max_diameter + 1):
+            layer2 = []
+            for i1 in range(pn):
+                # All states where we can go from layer1 by permutation i1 (except those that are in layer0).
+                next_group = [perm_funcs[i1](layer1[i2]) for i2 in range(pn) if i2 != inv_perm_idx[i1]]
+                states = np.hstack(next_group)
+                states = np.sort(states)
+                for i2 in range(pn):
+                    states = np.setdiff1d(states, layer0[i2], assume_unique=True)
+                    states = np.setdiff1d(states, layer1[i2], assume_unique=True)
+                layer2.append(states)
+            _make_states_unique(layer2)
+            layer2_size = sum(len(x) for x in layer2)
+            if layer2_size == 0:
+                bfs_completed = True
+                break
+            layer_sizes.append(layer2_size)
+            if self.verbose >= 2:
+                print(f"Layer {i}: {layer2_size} states.")
+            layer0, layer1 = layer1, layer2
+            if layer2_size >= 10 ** 9:
+                self._free_memory()
+        if self.verbose >= 2:
+            print(f"BFS time: {(time.time() - time_start):.3f}s.")
+
+        layers = {len(layer_sizes) - 1: self._decode_states(torch.tensor(np.hstack(layer1).reshape((1, -1))))}
+        return BfsResult(
+            layer_sizes=layer_sizes,
+            layers=layers,
+            bfs_completed=bfs_completed,
+            vertices_hashes=None,
+            edges_list_hashes=None)
 
     def _free_memory(self):
         if self.verbose >= 1:

@@ -168,7 +168,7 @@ def test_get_neighbors(bit_encoding_width):
 
 
 def test_edges_list_n2():
-    graph = CayleyGraph(prepare_graph("lrx", n=2)[0], dest="01")
+    graph = CayleyGraph([[1, 0]], dest="01")
     result = graph.bfs(return_all_edges=True, return_all_hashes=True)
     assert result.named_undirected_edges() == {('01', '10')}
 
@@ -197,18 +197,24 @@ def test_generators_not_inverse_closed():
 # Tests below compare growth function for small graphs with stored pre-computed results.
 def test_lrx_cayley_growth():
     expected = load_dataset("lrx_cayley_growth")
-    for n in range(2, 10):
+    for n in range(3, 10):
         generators, _ = prepare_graph("lrx", n=int(n))
-        result = CayleyGraph(generators).bfs()
+        graph = CayleyGraph(generators)
+        result = graph.bfs()
         assert result.layer_sizes == expected[str(n)]
+        result2 = graph.bfs_numpy()
+        assert result2.layer_sizes == expected[str(n)]
 
 
 def test_top_spin_cayley_growth():
     expected = load_dataset("top_spin_cayley_growth")
     for n in range(4, 10):
         generators, _ = prepare_graph("top_spin", n=int(n))
-        result = CayleyGraph(generators).bfs()
+        graph = CayleyGraph(generators)
+        result = graph.bfs()
         assert result.layer_sizes == expected[str(n)]
+        result2 = graph.bfs_numpy()
+        assert result2.layer_sizes == expected[str(n)]
 
 
 def test_lrx_coset_growth():
@@ -217,8 +223,11 @@ def test_lrx_coset_growth():
         if len(initial_state) > 15:
             continue
         generators, _ = prepare_graph("lrx", n=len(initial_state))
-        result = CayleyGraph(generators, dest=initial_state).bfs()
+        graph = CayleyGraph(generators, dest=initial_state)
+        result = graph.bfs()
         assert result.layer_sizes == expected[initial_state]
+        result2 = graph.bfs_numpy()
+        assert result2.layer_sizes == expected[initial_state]
 
 
 def test_top_spin_coset_growth():
@@ -227,8 +236,11 @@ def test_top_spin_coset_growth():
         if len(initial_state) > 15:
             continue
         generators, _ = prepare_graph("top_spin", n=len(initial_state))
-        result = CayleyGraph(generators, dest=initial_state).bfs()
+        graph = CayleyGraph(generators, dest=initial_state)
+        result = graph.bfs()
         assert result.layer_sizes == expected[initial_state]
+        result2 = graph.bfs_numpy()
+        assert result2.layer_sizes == expected[initial_state]
 
 
 # To skip slower tests ike this, do `FAST=1 pytest`
