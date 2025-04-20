@@ -285,7 +285,6 @@ class CayleyGraph:
         assert self.string_encoder is not None
         assert self.string_encoder.encoded_length == 1, "Only works on states encoded by single int64."
         perms = [list(x.numpy()) for x in self.generators]
-        print(perms)
         perm_funcs = [self.string_encoder.implement_permutation_1d(p) for p in perms]
         pn = len(perms)
         start_state = np.array(self._encode_states(self.destination_state), dtype=np.int64).reshape(-1)
