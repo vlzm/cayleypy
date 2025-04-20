@@ -73,7 +73,8 @@ def generate_datasets():
     keys = []
     for n in range(3, 30):
         keys += ["01" * (n // 2) + "0" * (n % 2)]
-        keys += ["0" * (n // 2) + "1" * (n // 2 + n % 2)]
+        keys += ["0" * (n // 2 + n % 2) + "1" * (n // 2)]
+    _update_dataset("lrx_coset_growth", keys, _compute_lrx_coset_growth)
     keys = [key for key in keys if len(key) >= 4]
     _update_dataset("top_spin_coset_growth", keys, _compute_top_spin_coset_growth)
 
