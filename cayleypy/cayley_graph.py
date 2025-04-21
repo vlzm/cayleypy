@@ -1,3 +1,4 @@
+import functools
 import gc
 import math
 import time
@@ -278,6 +279,11 @@ class CayleyGraph:
             bfs_completed=full_graph_explored,
             vertices_hashes=vertices_hashes,
             edges_list_hashes=edges_list_hashes)
+
+    @functools.cache
+    def to_networkx_graph(self):
+        return self.bfs(max_layer_size_to_store=10 ** 18, return_all_edges=True,
+                        return_all_hashes=True).to_networkx_graph()
 
     def bfs_numpy(self, max_diameter: int = 1000000) -> BfsResult:
         """Simple version of BFS (from destination_state) using numpy, optimized for memory usage."""
