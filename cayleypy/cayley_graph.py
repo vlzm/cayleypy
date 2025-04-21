@@ -11,6 +11,7 @@ from .bfs_result import BfsResult
 from .hasher import StateHasher
 from .permutation_utils import *
 from .string_encoder import StringEncoder
+from .torch_utils import isin_via_searchsorted
 
 
 class CayleyGraph:
@@ -242,8 +243,9 @@ class CayleyGraph:
 
             # BFS iteration: layer2 := neighbors(layer1)-layer0-layer1.
             layer2, layer2_hashes, _ = self.get_unique_states(layer1_neighbors, hashes=layer1_neighbors_hashes)
-            mask = ~torch.isin(layer2_hashes, layer0_hashes)
-            mask &= ~torch.isin(layer2_hashes, layer1_hashes)
+            mask = ~isin_via_searchsorted(layer2_hashes, layer1_hashes)
+            if i > 1:
+                mask &= ~isin_via_searchsorted(layer2_hashes, layer0_hashes)
             layer2 = layer2[mask]
             layer2_hashes = self.hasher.make_hashes(layer2) if self.hasher.is_identity else layer2_hashes[mask]
 
