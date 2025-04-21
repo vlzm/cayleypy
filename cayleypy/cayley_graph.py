@@ -295,7 +295,7 @@ class CayleyGraph:
         perms = [list(x.numpy()) for x in self.generators]
         perm_funcs = [self.string_encoder.implement_permutation_1d(p) for p in perms]
         pn = len(perms)
-        start_state = np.array(self._encode_states(self.destination_state), dtype=np.int64).reshape(-1)
+        start_state = self._encode_states(self.destination_state).cpu().numpy().reshape(-1)
         time_start = time.time()
         bfs_completed = False
 
