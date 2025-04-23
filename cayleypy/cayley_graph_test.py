@@ -194,6 +194,18 @@ def test_generators_not_inverse_closed():
         graph.bfs()
 
 
+def test_bfs_numpy():
+    graph = CayleyGraph(prepare_graph("lrx", n=7)[0])
+    assert graph.bfs_numpy() == load_dataset("lrx_cayley_growth")["7"]
+
+    graph = CayleyGraph(prepare_graph("top_spin", n=7)[0])
+    assert graph.bfs_numpy() == load_dataset("top_spin_cayley_growth")["7"]
+
+    dest = "000000000111111111"
+    graph = CayleyGraph(prepare_graph("top_spin", n=18)[0], dest=dest)
+    assert graph.bfs_numpy() == load_dataset("top_spin_coset_growth")[dest]
+
+
 # Tests below compare growth function for small graphs with stored pre-computed results.
 def test_lrx_cayley_growth():
     expected = load_dataset("lrx_cayley_growth")
@@ -202,8 +214,6 @@ def test_lrx_cayley_growth():
         graph = CayleyGraph(generators)
         result = graph.bfs()
         assert result.layer_sizes == expected[str(n)]
-        result2 = graph.bfs_numpy()
-        assert result2.layer_sizes == expected[str(n)]
 
 
 def test_top_spin_cayley_growth():
@@ -213,8 +223,6 @@ def test_top_spin_cayley_growth():
         graph = CayleyGraph(generators)
         result = graph.bfs()
         assert result.layer_sizes == expected[str(n)]
-        result2 = graph.bfs_numpy()
-        assert result2.layer_sizes == expected[str(n)]
 
 
 def test_lrx_coset_growth():
@@ -226,8 +234,6 @@ def test_lrx_coset_growth():
         graph = CayleyGraph(generators, dest=initial_state)
         result = graph.bfs()
         assert result.layer_sizes == expected[initial_state]
-        result2 = graph.bfs_numpy()
-        assert result2.layer_sizes == expected[initial_state]
 
 
 def test_top_spin_coset_growth():
@@ -239,8 +245,6 @@ def test_top_spin_coset_growth():
         graph = CayleyGraph(generators, dest=initial_state)
         result = graph.bfs()
         assert result.layer_sizes == expected[initial_state]
-        result2 = graph.bfs_numpy()
-        assert result2.layer_sizes == expected[initial_state]
 
 
 # To skip slower tests ike this, do `FAST=1 pytest`

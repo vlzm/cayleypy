@@ -287,7 +287,7 @@ class CayleyGraph:
         return self.bfs(max_layer_size_to_store=10 ** 18, return_all_edges=True,
                         return_all_hashes=True).to_networkx_graph()
 
-    def bfs_numpy(self, max_diameter: int = 1000000, np=np) -> BfsResult:
+    def bfs_numpy(self, max_diameter: int = 1000000, np=np) -> list[int]:
         """Simple version of BFS (from destination_state) using numpy, optimized for memory usage."""
         assert self.generators_inverse_closed, "Only supports undirected graph."
         assert self.string_encoder is not None
@@ -296,7 +296,7 @@ class CayleyGraph:
         perm_funcs = [self.string_encoder.implement_permutation_1d(p) for p in perms]
         pn = len(perms)
         start_state = self._encode_states(self.destination_state).cpu().numpy().reshape(-1)
-        start_state = np.array(start_state, dtype = np.int64)
+        start_state = np.array(start_state, dtype=np.int64)
         time_start = time.time()
         bfs_completed = False
 
@@ -343,13 +343,7 @@ class CayleyGraph:
         if self.verbose >= 2:
             print(f"BFS time: {(time.time() - time_start):.3f}s.")
 
-        layers = {len(layer_sizes) - 1: self._decode_states(torch.tensor(np.hstack(layer1).reshape((1, -1))))}
-        return BfsResult(
-            layer_sizes=layer_sizes,
-            layers=layers,
-            bfs_completed=bfs_completed,
-            vertices_hashes=None,
-            edges_list_hashes=None)
+        return layer_sizes
 
     def _free_memory(self):
         if self.verbose >= 1:
