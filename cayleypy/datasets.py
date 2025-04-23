@@ -12,7 +12,7 @@ DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
 
 
 @functools.cache
-def load_dataset(dataset_name: str, error_if_not_found=True) -> dict[str, str]:
+def load_dataset(dataset_name: str, error_if_not_found=True) -> dict[str, Any]:
     """Loads named dataset."""
     file_name = os.path.join(DATA_DIR, dataset_name + '.csv')
     data: dict[str, str] = dict()
