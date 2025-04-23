@@ -287,7 +287,7 @@ class CayleyGraph:
         return self.bfs(max_layer_size_to_store=10 ** 18, return_all_edges=True,
                         return_all_hashes=True).to_networkx_graph()
 
-    def bfs_numpy(self, max_diameter: int = 1000000) -> BfsResult:
+    def bfs_numpy(self, max_diameter: int = 1000000, np=np) -> BfsResult:
         """Simple version of BFS (from destination_state) using numpy, optimized for memory usage."""
         assert self.generators_inverse_closed, "Only supports undirected graph."
         assert self.string_encoder is not None
@@ -296,6 +296,7 @@ class CayleyGraph:
         perm_funcs = [self.string_encoder.implement_permutation_1d(p) for p in perms]
         pn = len(perms)
         start_state = self._encode_states(self.destination_state).cpu().numpy().reshape(-1)
+        start_state = np.array(start_state, dtype = np.int64)
         time_start = time.time()
         bfs_completed = False
 
@@ -315,7 +316,7 @@ class CayleyGraph:
         layer1 = [perm_funcs[i](start_state) for i in range(pn)]
         layer1 = [np.setdiff1d(x, start_state, assume_unique=True) for x in layer1]
         _make_states_unique(layer1)
-        layer_sizes = [1, len(set(list(np.hstack(layer1))))]
+        layer_sizes = [1, len(np.unique(np.hstack(layer1)))]
 
         for i in range(2, max_diameter + 1):
             layer2 = []
