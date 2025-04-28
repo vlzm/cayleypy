@@ -112,3 +112,21 @@ class StringEncoder:
         l: dict = {}
         exec(src, {}, l)
         return l["f_"]
+
+    def implement_permutation_1d_tf(self, p: list[int]) -> Callable[[np.ndarray], np.ndarray]:
+        """Like function above, but for 1D tensorflow tensors."""
+        import tensorflow as tf
+        assert self.encoded_length == 1
+        shift_to_mask = self.prepare_shift_to_mask(p)
+        terms = []
+        for (_, _, shift), mask in shift_to_mask.items():
+            term = f"x&{mask}"
+            if shift > 0:
+                term = f"tf.bitwise.left_shift({term},{shift})"
+            elif shift < 0:
+                term = f"tf.bitwise.right_shift({term},{-shift})"
+            terms.append(f"({term})")
+        src = "f_ = lambda x: " + " | ".join(terms)
+        l: dict = {}
+        exec(src, {"tf": tf}, l)
+        return l["f_"]
