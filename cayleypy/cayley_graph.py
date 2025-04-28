@@ -2,7 +2,7 @@ import functools
 import gc
 import math
 import time
-from typing import Optional
+from typing import Callable, Optional
 
 import numpy as np
 import torch
@@ -192,6 +192,7 @@ class CayleyGraph:
             max_diameter: int = 1000000,
             return_all_edges: bool = False,
             return_all_hashes: bool = False,
+            keep_alive_func: Callable[[], None] = lambda: None,
             ) -> BfsResult:
         """Runs bread-first search (BFS) algorithm from given `start_states`.
 
@@ -214,6 +215,7 @@ class CayleyGraph:
         :param max_diameter: maximal number of BFS iterations.
         :param return_all_edges: whether to return list of all edges (uses more memory).
         :param return_all_hashes: whether to return hashes for all vertices (uses more memory).
+        :param keep_alive_func - function to call on every iteration.
         :return: BfsResult object with requested BFS results.
         """
         # This version of BFS is correct only for undirected graph.
@@ -262,6 +264,7 @@ class CayleyGraph:
 
             layer1 = layer2
             layer0_hashes, layer1_hashes = layer1_hashes, layer2_hashes
+            keep_alive_func()
 
         if not full_graph_explored and self.verbose > 0:
             print("BFS stopped before graph was fully explored.")
@@ -287,7 +290,12 @@ class CayleyGraph:
         return self.bfs(max_layer_size_to_store=10 ** 18, return_all_edges=True,
                         return_all_hashes=True).to_networkx_graph()
 
-    def bfs_numpy(self, max_diameter: int = 1000000, np=np) -> list[int]:
+    def bfs_numpy(
+            self,
+            max_diameter: int = 1000000,
+            np=np,
+            keep_alive_func: Callable[[], None] = lambda: None) -> \
+            list[int]:
         """Simple version of BFS (from destination_state) using numpy, optimized for memory usage."""
         assert self.generators_inverse_closed, "Only supports undirected graph."
         assert self.string_encoder is not None
@@ -340,6 +348,7 @@ class CayleyGraph:
             layer0, layer1 = layer1, layer2
             if layer2_size >= 10 ** 9:
                 self._free_memory()
+            keep_alive_func()
         if self.verbose >= 2:
             print(f"BFS time: {(time.time() - time_start):.3f}s.")
 
