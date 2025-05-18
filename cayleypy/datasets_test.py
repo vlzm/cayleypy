@@ -8,7 +8,7 @@ def _verify_layers_fast(graph: CayleyGraph, layer_sizes: list[int]):
     if max(layer_sizes) < 100:
         assert layer_sizes == graph.bfs().layer_sizes
     else:
-        first_layers = graph.bfs(max_layer_size_to_explore=100).layer_sizes
+        first_layers = graph.bfs(max_layer_size_to_explore=1000).layer_sizes
         assert first_layers == layer_sizes[:len(first_layers)]
 
 
