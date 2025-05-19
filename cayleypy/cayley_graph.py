@@ -187,7 +187,7 @@ class CayleyGraph:
     def bfs(self,
             *,
             start_states: None | torch.Tensor | np.ndarray | list = None,
-            max_layer_size_to_store: int = 1000,
+            max_layer_size_to_store: None | int = 1000,
             max_layer_size_to_explore: int = 10 ** 9,
             max_diameter: int = 1000000,
             return_all_edges: bool = False,
@@ -230,6 +230,7 @@ class CayleyGraph:
         edges_list_starts = []
         edges_list_ends = []
         all_layers_hashes = []
+        max_layer_size_to_store = max_layer_size_to_store or 10 ** 15
 
         for i in range(1, max_diameter + 1):
             layer1_neighbors = self._get_neighbors_batched(layer1)
