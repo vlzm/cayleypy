@@ -209,7 +209,7 @@ class CayleyGraph:
         :param start_states: states on 0-th layer of BFS. Defaults to destination state of the graph.
         :param max_layer_size_to_store: maximal size of layer to store.
                If None, all layers will be stored (use this if you need full graph).
-               Defaults to 1000. Set to very large number (e.g. 10**12) if you need all vertices explicitly.
+               Defaults to 1000.
                First and last layers are always stored.
         :param max_layer_size_to_explore: if reaches layer of larger size, will stop the BFS.
         :param max_diameter: maximal number of BFS iterations.
