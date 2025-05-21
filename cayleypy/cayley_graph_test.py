@@ -80,10 +80,16 @@ def test_bfs_max_layer_size_to_explore():
 
 def test_bfs_max_layer_size_to_store():
     graph = CayleyGraph(prepare_graph("lrx", n=10)[0], dest="0110110110")
+
     ans = graph.bfs(max_layer_size_to_store=10)
     assert ans.bfs_completed
     assert ans.diameter() == 17
     assert ans.layers.keys() == {0, 1, 2, 3, 12, 13, 14, 15, 16, 17}
+
+    ans = graph.bfs(max_layer_size_to_store=None)
+    assert ans.bfs_completed
+    assert ans.diameter() == 17
+    assert ans.layers.keys() == set(range(18))
 
 
 def test_bfs_start_state():
