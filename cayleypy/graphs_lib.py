@@ -8,13 +8,10 @@ from cayleypy.permutation_utils import (
     inverse_permutation,
 )
 
-CUBE222_ALLOWED_MOVES = {
-    "f0": [0, 1, 19, 17, 6, 4, 7, 5, 2, 9, 3, 11, 12, 13, 14, 15, 16, 20, 18, 21, 10, 8, 22, 23],
-    "-f0": [0, 1, 8, 10, 5, 7, 4, 6, 21, 9, 20, 11, 12, 13, 14, 15, 16, 3, 18, 2, 17, 19, 22, 23],
-    "r1": [0, 5, 2, 7, 4, 21, 6, 23, 10, 8, 11, 9, 3, 13, 1, 15, 16, 17, 18, 19, 20, 14, 22, 12],
-    "-r1": [0, 14, 2, 12, 4, 1, 6, 3, 9, 11, 8, 10, 23, 13, 21, 15, 16, 17, 18, 19, 20, 5, 22, 7],
-    "d0": [0, 1, 2, 3, 4, 5, 18, 19, 8, 9, 6, 7, 12, 13, 10, 11, 16, 17, 14, 15, 22, 20, 23, 21],
-    "-d0": [0, 1, 2, 3, 4, 5, 10, 11, 8, 9, 14, 15, 12, 13, 18, 19, 16, 17, 6, 7, 21, 23, 20, 22],
+CUBE222_MOVES = {
+    "f0": pfc(24, [[2, 19, 21, 8], [3, 17, 20, 10], [4, 6, 7, 5]]),
+    "r1": pfc(24, [[1, 5, 21, 14], [3, 7, 23, 12], [8, 10, 11, 9]]),
+    "d0": pfc(24, [[6, 18, 14, 10], [7, 19, 15, 11], [20, 22, 23, 21]]),
 }
 
 CUBE333_MOVES = {
@@ -148,16 +145,17 @@ def prepare_graph(name: str, n: int = 0, **kwargs) -> CayleyGraph:
         ]
         return CayleyGraph(generators, dest=list(range(n)))
     elif name == "cube_2/2/2_6gensQTM":
-        generator_names = list(CUBE222_ALLOWED_MOVES.keys())
-        generators = [CUBE222_ALLOWED_MOVES[k] for k in generator_names]
+        generators, generator_names = [], []
+        for move_id, perm in CUBE222_MOVES.items():
+            generators += [perm, inverse_permutation(perm)]
+            generator_names += [move_id, move_id + "'"]
         initial_state = [color for color in range(6) for _ in range(4)]
         return CayleyGraph(generators, dest=initial_state, generator_names=generator_names)
     elif name == "cube_2/2/2_9gensHTM":
-        generator_names = list(CUBE222_ALLOWED_MOVES.keys())
-        generators = [CUBE222_ALLOWED_MOVES[k] for k in generator_names]
-        for move_id in ["f0", "r1", "d0"]:
-            generators.append(compose_permutations(CUBE222_ALLOWED_MOVES[move_id], CUBE222_ALLOWED_MOVES[move_id]))
-            generator_names.append(move_id + "^2")
+        generators, generator_names = [], []
+        for move_id, perm in CUBE222_MOVES.items():
+            generators += [perm, inverse_permutation(perm), compose_permutations(perm, perm)]
+            generator_names += [move_id, move_id + "'", move_id + "^2"]
         initial_state = [color for color in range(6) for _ in range(4)]
         return CayleyGraph(generators, dest=initial_state, generator_names=generator_names)
     elif name == "cube_3/3/3_12gensQTM":
