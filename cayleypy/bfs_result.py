@@ -19,6 +19,7 @@ class BfsResult:
     Can be used to obtain the graph explicitly. In this case, vertices are numbered sequentially in the order in which
     they are visited by BFS.
     """
+
     bfs_completed: bool  # Whether full graph was explored.
     layer_sizes: list[int]  # i-th element is number of states at distance i from start.
     layers: dict[int, torch.Tensor]  # Explicitly stored states for each layer.
@@ -61,7 +62,7 @@ class BfsResult:
         n = self.num_vertices
         assert self.vertices_hashes is not None, "Run bfs with return_all_hashes=True."
         assert len(self.vertices_hashes) == n
-        ans: dict[int, int] = dict()
+        ans: dict[int, int] = {}
         for i in range(n):
             ans[int(self.vertices_hashes[i])] = i
         assert len(ans) == n, "Hash collision."
@@ -114,7 +115,9 @@ class BfsResult:
 
     def to_networkx_graph(self, directed=False, with_labels=True):
         """Returns explicit graph as networkx.Graph or networkx.DiGraph."""
-        import networkx  # So we don't need to depend on this library in requirements.
+        # Import networkx here so we don't need to depend on this library in requirements.
+        import networkx  # pylint: disable=import-outside-toplevel
+
         vertex_names = self.vertex_names
         ans = networkx.DiGraph() if directed else networkx.Graph()
         for name in vertex_names:
