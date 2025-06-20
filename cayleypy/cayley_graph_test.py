@@ -320,6 +320,30 @@ def test_bfs_small_hash_chunk_size():
     assert graph.bfs(max_diameter=8).layer_sizes == [1, 3, 6, 12, 24, 48, 91, 172, 325]
 
 
+def test_hashes_list_len():
+    graph = CayleyGraph(prepare_graph("lrx", n=10).generators, dest="0110110110")
+    result = graph.bfs(return_all_edges=True, return_all_hashes=True)
+    assert result.bfs_completed
+    assert result.num_vertices == len(result.vertices_hashes)
+    assert result.num_vertices == len(result.vertex_names)
+
+
+def test_hashes_list_len_max_radius():
+    graph = CayleyGraph(prepare_graph("lrx", n=10).generators, dest="0110110110")
+    result = graph.bfs(return_all_edges=True, return_all_hashes=True, max_diameter=2)
+    assert not result.bfs_completed
+    assert result.num_vertices == len(result.vertices_hashes)
+    assert result.num_vertices == len(result.vertex_names)
+
+
+def test_hashes_list_len_max_layer_size_to_explore():
+    graph = CayleyGraph(prepare_graph("lrx", n=10).generators, dest="0110110110")
+    result = graph.bfs(return_all_edges=True, return_all_hashes=True, max_layer_size_to_explore=2)
+    assert not result.bfs_completed
+    assert result.num_vertices == len(result.vertices_hashes)
+    assert result.num_vertices == len(result.vertex_names)
+
+
 # Below is the benchmark code. To run: `BENCHMARK=1 pytest . -k benchmark`
 @pytest.mark.skipif(not BENCHMARK_RUN, reason="benchmark")
 @pytest.mark.parametrize("benchmark_mode", ["baseline", "bit_encoded", "bfs_numpy"])
