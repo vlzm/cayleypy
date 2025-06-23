@@ -131,6 +131,7 @@ def test_puzzles_growth():
     _verify_layers_fast(rubik_cube(2, metric="QSTM"), data["cube_222_qstm"])
     _verify_layers_fast(prepare_graph("mini_pyramorphix"), data["mini_pyramorphix"])
     _verify_layers_fast(prepare_graph("pyraminx"), data["pyraminx"])
+    _verify_layers_fast(prepare_graph("starminx"), data["starminx"])
 
 
 def test_globes_growth():
