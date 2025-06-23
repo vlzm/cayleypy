@@ -118,3 +118,26 @@ def test_pyraminx():
         assert np.all(graph_gens[gen_name] == gen)
         assert np.all(graph_gens[gen_name + "_inv"] == inverse_permutation(gen))
         assert len(gen) == perm_set_length
+
+
+def test_three_cycles():
+    graph = prepare_graph("three_cycles", n=4)
+    assert graph.n_generators == 8
+    expected_generators = [
+        [1, 2, 0, 3],
+        [1, 3, 2, 0],
+        [2, 0, 1, 3],
+        [2, 1, 3, 0],
+        [3, 0, 2, 1],
+        [3, 1, 0, 2],
+        [0, 2, 3, 1],
+        [0, 3, 1, 2],
+    ]
+    assert np.array_equal(graph.generators, expected_generators)
+
+
+def test_three_cycles_0ij():
+    graph = prepare_graph("three_cycles_0ij", n=4)
+    assert graph.n_generators == 6
+    expected_generators = [[1, 2, 0, 3], [1, 3, 2, 0], [2, 0, 1, 3], [2, 1, 3, 0], [3, 0, 2, 1], [3, 1, 0, 2]]
+    assert np.array_equal(graph.generators, expected_generators)
