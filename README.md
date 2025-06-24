@@ -1,21 +1,41 @@
 # CaleyPy
 
-Library for studying Cayley graphs and Schreier coset graphs.
+AI-based libarary to work with google-size graphs.
+Supporting:  Cayley graphs, Schreier coset graphs, more to be added.
+
 
 ## Overview
 
-This is a library for studying
-[Schreier coset graphs](https://en.wikipedia.org/wiki/Schreier_coset_graph)
-and [Caley graphs](https://en.wikipedia.org/wiki/Cayley_graph).
+Exteremely large graphs (e.g. google size) cannot be approached in a usual way,
+it is impossible neither to create, neither to store them by standard methods.
 
-This what we plan to support:
+Typically such graphs arise as state-transition graphs.
+For chess, Go or any other games - nodes of the graphs are positions, edges correspond to moves between them.
+For Rubik's cube - nodes are configurations, edges corresponds to configurations different by single moves. 
 
+The most simple and clear examples of such graphs - are [Caley graphs](https://en.wikipedia.org/wiki/Cayley_graph) in mathematics.
+(and [Schreier coset graphs](https://en.wikipedia.org/wiki/Schreier_coset_graph) ). 
+Initial developments will focus on these graphs, supporting other types later. 
+
+We plan to support:
+
+* ML/RL methods for pathfinding 
+* Estimation of diameters and growths
+* Embeddings
+* Efficient BFS for small subgraphs
+* Efficient random walks generation
+* Efficient Beam Search 
+* Hamiltionan paths finding
+* Efficient computing on CPU, GPU, TPU (with JAX), usable on Kaggle.
+* Etc. 
+
+Mathematical applications: 
+* Estimation of diameters and growths
+* Approximation of the word metrics and diffusion distnace
+* Estimation of the mixing time for random walks of different types 
 * BFS from given state (growth function, adjacency matrix, last layers).
-* Efficient path finding (beam search).
-* Random walk generation.
 * Library of graphs and generators (LRX, TopSpin, Rubik Cubes, wreath, globe etc.,
   see [here](https://www.kaggle.com/code/ivankolt/generation-of-incidence-mtx-pancake)).
-* Efficient computing on CPU, GPU, TPU (with JAX), usable on Kaggle.
 * Library of datasets with solutions to some problems (e.g. growth functions like
   [here](https://www.kaggle.com/code/fedimser/bfs-for-binary-string-permutations)).
 
@@ -69,10 +89,20 @@ your code using Black. There are few convenient ways to do that:
 
 ## Credits
 
-The initial code for this library is based on [cayleypy](https://github.com/iKolt/cayleypy)
-by [Ivan Koltsov](https://github.com/iKolt), which is itself based on code by
-[Alexander Chervov](https://github.com/chervov) and
-[Kirill Khoruzhii](https://github.com/k1242).
+The idea of the project - Alexander Chervov - see https://arxiv.org/abs/2502.18663, 
+https://arxiv.org/abs/2502.13266, discussion group https://t.me/sberlogasci/1,
+Early ideas and prototypes appeared during Kaggle challenge Santa 2023:
+Prototype: https://www.kaggle.com/code/alexandervc/santa23-globe26-modeling5,
+Description: https://www.kaggle.com/competitions/santa-2023/discussion/466399, 
+https://www.kaggle.com/competitions/santa-2023/discussion/472594. 
+
+The initial code developments can be found at Kaggle dataset:
+https://www.kaggle.com/datasets/alexandervc/growth-in-finite-groups (see paper https://arxiv.org/abs/2502.13266 )
+Other developments can be found at:
+https://www.kaggle.com/competitions/lrx-oeis-a-186783-brainstorm-math-conjecture/code,
+https://www.kaggle.com/datasets/alexandervc/cayleypy-development-3-growth-computations,
+see also beam-search part: [ Cayleypy (Ivan Koltsov) ](https://github.com/iKolt/cayleypy),
+Rubik's cube part: [Piligrim (Kirill Khoruzhii)](https://github.com/k1242).
 
 Also, code from the following Kaggle notebooks was used:
 
