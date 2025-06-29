@@ -30,9 +30,7 @@ jobs:
           python-version: '3.12'
           architecture: 'x64'
       - name: Install requirements
-        run: |
-          pip install -r requirements.txt
-          pip install -r requirements-dev.txt
+        run: pip install .[torch,lint,test]
       - name: Lint
         run: ./lint.sh
   pytest-ubuntu:
@@ -48,9 +46,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
           architecture: 'x64'
       - name: Install requirements
-        run: |
-          pip install -r requirements.txt
-          pip install pytest
+        run: pip install .[torch,test]
       - name: Run tests
         run: pytest
   pytest-windows:
@@ -63,9 +59,7 @@ jobs:
           python-version: '3.12'
           architecture: 'x64'
       - name: Install requirements
-        run: |
-          pip install -r requirements.txt
-          pip install pytest
+        run: pip install .[torch,test]
       - name: Run tests
         run: pytest
   pytest-macos:
@@ -78,9 +72,7 @@ jobs:
           python-version: '3.12'
           architecture: 'x64'
       - name: Install requirements
-        run: |
-          pip install -r requirements.txt
-          pip install pytest
+        run: pip install .[torch,test]
       - name: Run tests
         run: pytest
   build-docs:
@@ -95,7 +87,6 @@ jobs:
       - name: Install requirements
         run: |
           sudo apt-get install pandoc
-          pip install -r requirements.txt
-          pip install sphinx sphinx_rtd_theme sphinx_markdown_parser
+          pip install .[torch,docs]
       - name: Build the docs
         run: docs/build_docs.sh
