@@ -342,7 +342,7 @@ def _state_to_str(state: torch.Tensor):
 
 def test_random_walks_single_walk():
     graph = CayleyGraph(PermutationGroups.lrx(5))
-    x, y = graph.random_walks(rw_num=1, rw_length=5)
+    x, y = graph.random_walks(width=1, length=5)
     assert x.shape == (5, 5)
     assert y.shape == (5,)
     assert _state_to_str(x[0]) == "01234"
@@ -352,7 +352,7 @@ def test_random_walks_single_walk():
 
 def test_random_walks_matrix_group():
     graph = CayleyGraph(MatrixGroups.heisenberg())
-    x, y = graph.random_walks(rw_num=20, rw_length=10)
+    x, y = graph.random_walks(width=20, length=10)
     assert x.shape == (200, 3, 3)
     assert y.shape == (200,)
     assert np.array_equal(y, [i for i in range(10) for _ in range(20)])
@@ -360,13 +360,37 @@ def test_random_walks_matrix_group():
 
 def test_random_walks_start_state():
     graph = CayleyGraph(PermutationGroups.lx(5))
-    x, y = graph.random_walks(rw_num=10, rw_length=5, start_state=[1, 0, 0, 0, 0])
+    x, y = graph.random_walks(width=10, length=5, start_state=[1, 0, 0, 0, 0])
     assert x.shape == (50, 5)
     assert y.shape == (50,)
     for i in range(10):
         assert _state_to_str(x[i]) == "10000"
     for i in range(10, 20):
         assert _state_to_str(x[i]) in ["01000", "00001"]
+
+
+def test_random_walks_bfs_small():
+    graph = CayleyGraph(PermutationGroups.lrx(4))
+    x, y = graph.random_walks(width=50, length=100, mode="bfs")
+    assert x.shape == (24, 4)
+    assert y.shape == (24,)
+    assert np.array_equal(y.cpu().numpy(), [0, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, 5, 6])
+
+
+def test_random_walks_bfs():
+    graph = CayleyGraph(PermutationGroups.lrx(20))
+    x, y = graph.random_walks(width=100, length=50, mode="bfs")
+    assert x.shape == (4485, 20)
+    assert y.shape == (4485,)
+    assert y[0] == 0
+    assert y[-1] == 49
+
+
+def test_random_walks_bfs_matrix_groups():
+    graph = CayleyGraph(MatrixGroups.heisenberg())
+    x, y = graph.random_walks(width=100, length=50, mode="bfs")
+    assert x.shape == (4635, 3, 3)
+    assert y.shape == (4635,)
 
 
 def _validate_beam_search_result(graph: CayleyGraph, start_state, bs_result: BeamSearchResult):
@@ -376,8 +400,8 @@ def _validate_beam_search_result(graph: CayleyGraph, start_state, bs_result: Bea
     assert torch.equal(path_result, graph.central_state)
 
 
-def _scramble(graph, num_scrambles):
-    return graph.random_walks(rw_num=1, rw_length=num_scrambles + 1)[0][-1]
+def _scramble(graph: CayleyGraph, num_scrambles: int) -> torch.Tensor:
+    return graph.random_walks(width=1, length=num_scrambles + 1)[0][-1]
 
 
 def test_beam_search_lrx_few_steps():
@@ -410,13 +434,19 @@ def test_beam_search_lrx_n8_random():
     _validate_beam_search_result(graph, start_state, bs_result)
 
 
+def test_beam_search_mini_pyramorphix():
+    graph = CayleyGraph(prepare_graph("mini_pyramorphix"))
+    start_state = _scramble(graph, 100)
+    bs_result = graph.beam_search(start_state=start_state, beam_width=10**7, return_path=True)
+    assert bs_result.path_length <= 5
+    _validate_beam_search_result(graph, start_state, bs_result)
+
+
 @pytest.mark.skipif(not RUN_SLOW_TESTS, reason="slow test")
 def test_beam_search_cube222():
     graph = CayleyGraph(prepare_graph("cube_2/2/2_6gensQTM"))
     start_state = _scramble(graph, 100)
-
-    predictor = Predictor.hamming(graph)
-    bs_result = graph.beam_search(start_state=start_state, beam_width=10**7, predictor=predictor, return_path=True)
+    bs_result = graph.beam_search(start_state=start_state, beam_width=10**7, return_path=True)
     assert bs_result.path_length <= 14
     _validate_beam_search_result(graph, start_state, bs_result)
 
@@ -425,16 +455,14 @@ def test_beam_search_not_found():
     n = 50
     graph = CayleyGraph(PermutationGroups.lrx(n))
     start_state = np.random.permutation(n)
-    bs_result = graph.beam_search(
-        start_state=start_state, beam_width=10, max_iterations=10, predictor=Predictor.const()
-    )
+    bs_result = graph.beam_search(start_state=start_state, beam_width=10, max_iterations=10)
     assert not bs_result.path_found
 
 
 def test_beam_search_matrix_groups():
     graph = CayleyGraph(MatrixGroups.heisenberg())
     start_state = [[1, 2, 3], [0, 1, 1], [0, 0, 1]]
-    bs_result = graph.beam_search(start_state=start_state, predictor=Predictor.const(), return_path=True)
+    bs_result = graph.beam_search(start_state=start_state, return_path=True)
     _validate_beam_search_result(graph, start_state, bs_result)
 
 
