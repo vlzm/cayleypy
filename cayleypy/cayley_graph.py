@@ -436,7 +436,7 @@ class CayleyGraph:
         self,
         *,
         start_state: Union[torch.Tensor, np.ndarray, list],
-        predictor: Predictor = Predictor.const(),
+        predictor: Optional[Predictor] = None,
         beam_width=1000,
         max_iterations=1000,
         return_path=False,
@@ -444,26 +444,34 @@ class CayleyGraph:
         """Tries to find a path from `start_state` to central state using Beam Search algorithm.
 
         :param start_state: State from which to star search.
-        :param predictor: A heuristic that estimates scores for states (lower score= closer to center).
+        :param predictor: A heuristic that estimates scores for states (lower score = closer to center).
+          Defaults to Hamming distance heuristic.
         :param beam_width: Width of the beam (how many "best" states we consider at each step".
         :param max_iterations: Maximum number of iterations before giving up.
         :param return_path: Whether to return parth (consumes much more memory if True).
         :return: BeamSearchResult containing found path length and 9optionally) the path itself.
         """
+        if predictor is None:
+            predictor = Predictor(self, "hamming")
         start_states = self.encode_states(start_state)
         layer1, layer1_hashes, _ = self.get_unique_states(start_states)
         all_layers_hashes = [layer1_hashes]
+        debug_scores = {}  # type: dict[int, float]
+
+        if self.central_state_hash[0] == layer1_hashes[0]:
+            # Start state is the central state.
+            return BeamSearchResult(True, 0, [], debug_scores, self.definition)
 
         for i in range(max_iterations):
-            if bool(isin_via_searchsorted(self.central_state_hash, layer1_hashes)):
+            # Create states on the next layer.
+            layer2, layer2_hashes, _ = self.get_unique_states(self.get_neighbors(layer1))
+
+            if bool(isin_via_searchsorted(self.central_state_hash, layer2_hashes)):
                 # Path found.
                 path = None
                 if return_path:
                     path = self._restore_beam_search_path(all_layers_hashes)
-                return BeamSearchResult(True, i, path, self.definition)
-
-            # Create states on the next layer.
-            layer2, layer2_hashes, _ = self.get_unique_states(self.get_neighbors(layer1))
+                return BeamSearchResult(True, i + 1, path, debug_scores, self.definition)
 
             # Pick `beam_width` states with lowest scores.
             if len(layer2) >= beam_width:
@@ -471,8 +479,9 @@ class CayleyGraph:
                 idx = torch.argsort(scores)[:beam_width]
                 layer2 = layer2[idx, :]
                 layer2_hashes = layer2_hashes[idx]
+                best_score = float(scores[idx[0]])
+                debug_scores[i] = best_score
                 if self.verbose >= 2:
-                    best_score = scores[idx[0]]
                     print(f"Iteration {i}, best score {best_score}.")
 
             layer1 = layer2
@@ -481,17 +490,16 @@ class CayleyGraph:
                 all_layers_hashes.append(layer1_hashes)
 
         # Path not found.
-        return BeamSearchResult(False, 0, None, self.definition)
+        return BeamSearchResult(False, 0, None, debug_scores, self.definition)
 
     def _restore_beam_search_path(self, hashes: list[torch.Tensor]) -> list[int]:
         """Restores path found by the Beam Search algorithm."""
         inv_graph = CayleyGraph(self.definition.with_inverted_generators())
-        assert bool(isin_via_searchsorted(self.central_state_hash, hashes[-1]))
         assert len(hashes[0]) == 1
         path = []  # type: list[int]
         cur_state = self.decode_states(self.encode_states(self.central_state))
 
-        for i in range(len(hashes) - 2, -1, -1):
+        for i in range(len(hashes) - 1, -1, -1):
             # Find hash in hashes[i] from which we could go to cur_state.
             # Corresponding state will be new_cur_state.
             # The generator index in inv_graph that moves cur_state->new_cur_state is the same as generator index
