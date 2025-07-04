@@ -106,10 +106,13 @@ class CayleyGraph:
         self.hasher = StateHasher(self.encoded_state_size, random_seed, self.device, chunk_size=hash_chunk_size)
         self.central_state_hash = self.hasher.make_hashes(self.encode_states(self.central_state))
 
-    def get_unique_states(
+    def _get_unique_states(
         self, states: torch.Tensor, hashes: Optional[torch.Tensor] = None
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        """Removes duplicates from `states`. May change order."""
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """Removes duplicates from `states` and sorts them by hash."""
+        if self.hasher.is_identity:
+            unique_hashes = torch.unique(states.reshape(-1), sorted=True)
+            return unique_hashes.reshape((-1, 1)), unique_hashes
         if hashes is None:
             hashes = self.hasher.make_hashes(states)
         hashes_sorted, idx = torch.sort(hashes, stable=True)
@@ -120,9 +123,7 @@ class CayleyGraph:
             mask[1:] = hashes_sorted[1:] != hashes_sorted[:-1]
 
         unique_idx = idx[mask]
-        unique_states = states[unique_idx]
-        unique_hashes = self.hasher.make_hashes(unique_states) if self.hasher.is_identity else hashes[unique_idx]
-        return unique_states, unique_hashes, unique_idx
+        return states[unique_idx], hashes[unique_idx]
 
     def encode_states(self, states: Union[torch.Tensor, np.ndarray, list]) -> torch.Tensor:
         """Converts states from human-readable to internal representation."""
@@ -223,7 +224,7 @@ class CayleyGraph:
         :return: BfsResult object with requested BFS results.
         """
         start_states = self.encode_states(start_states or self.central_state)
-        layer1, layer1_hashes, _ = self.get_unique_states(start_states)
+        layer1, layer1_hashes = self._get_unique_states(start_states)
         layer_sizes = [len(layer1)]
         layers = {0: self.decode_states(layer1)}
         full_graph_explored = False
@@ -232,44 +233,46 @@ class CayleyGraph:
         all_layers_hashes = []
         max_layer_size_to_store = max_layer_size_to_store or 10**15
 
-        # When state fits in a single int64 and we don't need edges, we can apply more memory-efficient algorithm
-        # with batching. This algorithm finds neighbors in batches and removes duplicates from batches before
-        # stacking them.
-        do_batching = (
-            self.string_encoder is not None and self.string_encoder.encoded_length == 1 and not return_all_edges
-        )
+        # When we don't need edges, we can apply more memory-efficient algorithm with batching.
+        # This algorithm finds neighbors in batches and removes duplicates from batches before stacking them.
+        do_batching = not return_all_edges
 
         # Stores hashes of previous layers, so BFS does not visit already visited states again.
         # If generators are inverse closed, only 2 last layers are stored here.
         seen_states_hashes = [layer1_hashes]
 
         # Returns mask where 0s are at positions in `current_layer_hashes` that were seen previously.
-        def remove_seen_states(current_layer_hashes: torch.Tensor) -> torch.Tensor:
+        def _remove_seen_states(current_layer_hashes: torch.Tensor) -> torch.Tensor:
             ans = ~isin_via_searchsorted(current_layer_hashes, seen_states_hashes[-1])
             for h in seen_states_hashes[:-1]:
                 ans &= ~isin_via_searchsorted(current_layer_hashes, h)
             return ans
+
+        # Applies the same mask to states and hashes.
+        # If states and hashes are the same thing, it will not create a copy.
+        def _apply_mask(states, hashes, mask):
+            new_states = states[mask]
+            new_hashes = self.hasher.make_hashes(new_states) if self.hasher.is_identity else hashes[mask]
+            return new_states, new_hashes
 
         # BFS iteration: layer2 := neighbors(layer1)-layer0-layer1.
         for i in range(1, max_diameter + 1):
             if do_batching and len(layer1) > self.batch_size:
                 num_batches = int(math.ceil(layer1_hashes.shape[0] / self.batch_size))
                 layer2_batches = []  # type: list[torch.Tensor]
+                layer2_hashes_batches = []  # type: list[torch.Tensor]
                 for layer1_batch in layer1.tensor_split(num_batches, dim=0):
-                    layer2_batch = self.get_neighbors(layer1_batch).reshape((-1,))
-                    layer2_batch = torch.unique(layer2_batch, sorted=True)
-                    mask = remove_seen_states(layer2_batch)
-                    for other_batch in layer2_batches:
-                        mask &= ~isin_via_searchsorted(layer2_batch, other_batch)
-                    layer2_batch = layer2_batch[mask]
-                    if len(layer2_batch) > 0:
-                        layer2_batches.append(layer2_batch)
-                if len(layer2_batches) == 0:
-                    layer2_hashes = torch.empty((0,))
-                else:
-                    layer2_hashes = torch.hstack(layer2_batches)
-                    layer2_hashes, _ = torch.sort(layer2_hashes)
-                layer2 = layer2_hashes.reshape((-1, 1))
+                    layer2_batch = self.get_neighbors(layer1_batch)
+                    layer2_batch, layer2_hashes_batch = self._get_unique_states(layer2_batch)
+                    mask = _remove_seen_states(layer2_hashes_batch)
+                    for other_batch_hashes in layer2_hashes_batches:
+                        mask &= ~isin_via_searchsorted(layer2_hashes_batch, other_batch_hashes)
+                    layer2_batch, layer2_hashes_batch = _apply_mask(layer2_batch, layer2_hashes_batch, mask)
+                    layer2_batches.append(layer2_batch)
+                    layer2_hashes_batches.append(layer2_hashes_batch)
+                layer2_hashes = torch.hstack(layer2_hashes_batches)
+                layer2_hashes, _ = torch.sort(layer2_hashes)
+                layer2 = layer2_hashes.reshape((-1, 1)) if self.hasher.is_identity else torch.vstack(layer2_batches)
             else:
                 layer1_neighbors = self.get_neighbors(layer1)
                 layer1_neighbors_hashes = self.hasher.make_hashes(layer1_neighbors)
@@ -277,10 +280,9 @@ class CayleyGraph:
                     edges_list_starts += [layer1_hashes.repeat(self.definition.n_generators)]
                     edges_list_ends.append(layer1_neighbors_hashes)
 
-                layer2, layer2_hashes, _ = self.get_unique_states(layer1_neighbors, hashes=layer1_neighbors_hashes)
-                mask = remove_seen_states(layer2_hashes)
-                layer2 = layer2[mask]
-                layer2_hashes = self.hasher.make_hashes(layer2) if self.hasher.is_identity else layer2_hashes[mask]
+                layer2, layer2_hashes = self._get_unique_states(layer1_neighbors, hashes=layer1_neighbors_hashes)
+                mask = _remove_seen_states(layer2_hashes)
+                layer2, layer2_hashes = _apply_mask(layer2, layer2_hashes, mask)
 
             if layer2.shape[0] * layer2.shape[1] * 8 > 0.1 * self.memory_limit_bytes:
                 self.free_memory()
@@ -323,7 +325,10 @@ class CayleyGraph:
         if return_all_hashes:
             vertices_hashes = torch.hstack(all_layers_hashes)
 
-        layers[len(layer_sizes) - 1] = self.decode_states(layer1)
+        # Always store the last layer.
+        last_layer_id = len(layer_sizes) - 1
+        if full_graph_explored and last_layer_id not in layers:
+            layers[last_layer_id] = self.decode_states(layer1)
 
         return BfsResult(
             layer_sizes=layer_sizes,
@@ -372,7 +377,7 @@ class CayleyGraph:
 
         for i_step in range(1, length):
             next_states = self.get_neighbors(x[-1])
-            next_states, next_states_hashes, _ = self.get_unique_states(next_states)
+            next_states, next_states_hashes = self._get_unique_states(next_states)
             mask = x_hashes.get_mask_to_remove_seen_hashes(next_states_hashes)
             next_states, next_states_hashes = next_states[mask], next_states_hashes[mask]
             layer_size = len(next_states)
@@ -454,7 +459,7 @@ class CayleyGraph:
         if predictor is None:
             predictor = Predictor(self, "hamming")
         start_states = self.encode_states(start_state)
-        layer1, layer1_hashes, _ = self.get_unique_states(start_states)
+        layer1, layer1_hashes = self._get_unique_states(start_states)
         all_layers_hashes = [layer1_hashes]
         debug_scores = {}  # type: dict[int, float]
 
@@ -464,7 +469,7 @@ class CayleyGraph:
 
         for i in range(max_iterations):
             # Create states on the next layer.
-            layer2, layer2_hashes, _ = self.get_unique_states(self.get_neighbors(layer1))
+            layer2, layer2_hashes = self._get_unique_states(self.get_neighbors(layer1))
 
             if bool(isin_via_searchsorted(self.central_state_hash, layer2_hashes)):
                 # Path found.
