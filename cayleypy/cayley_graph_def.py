@@ -201,14 +201,32 @@ class CayleyGraphDef:
         return len(self.central_state)
 
     @cached_property
-    def generators_inverse_closed(self) -> bool:
-        """Whether for each generator its inverse is also a generator."""
+    def generators_inverse_map(self) -> Optional[list[int]]:
+        """Maps generators to their inverses. Returns None if generators are not inverse-closed."""
+        ans = []
         if self.generators_type == GeneratorType.PERMUTATION:
-            generators_set = set(tuple(perm) for perm in self.generators_permutations)
-            return all(tuple(inverse_permutation(p)) in generators_set for p in self.generators_permutations)
+            generators_idx = {tuple(self.generators_permutations[i]): i for i in range(self.n_generators)}
+            for i in range(self.n_generators):
+                inv_perm = tuple(inverse_permutation(self.generators_permutations[i]))
+                if inv_perm not in generators_idx:
+                    return None
+                ans.append(generators_idx[inv_perm])
         else:
             assert self.generators_type == GeneratorType.MATRIX
-            return all(any(g1.is_inverse_to(g2) for g2 in self.generators_matrices) for g1 in self.generators_matrices)
+            for i in range(self.n_generators):
+                i_inv = -1
+                for j in range(self.n_generators):
+                    if self.generators_matrices[i].is_inverse_to(self.generators_matrices[j]):
+                        i_inv = j
+                if i_inv == -1:
+                    return None
+                ans.append(i_inv)
+        return ans
+
+    @cached_property
+    def generators_inverse_closed(self) -> bool:
+        """Whether for each generator its inverse is also a generator."""
+        return self.generators_inverse_map is not None
 
     @cached_property
     def decoded_state_shape(self) -> tuple[int, ...]:
@@ -265,3 +283,12 @@ class CayleyGraphDef:
                 generators=[m.inv for m in self.generators_matrices],
                 central_state=self.central_state,
             )
+
+    def path_to_string(self, path: list[int], delimiter=".") -> str:
+        return delimiter.join(self.generator_names[i] for i in path)
+
+    def revert_path(self, path: list[int]) -> list[int]:
+        """Given path A->B, returns path B->A. Only for inverse-closed generators."""
+        idx = self.generators_inverse_map
+        assert idx is not None, "Cannot revert path because generators are not inverse closed."
+        return [idx[i] for i in path[::-1]]

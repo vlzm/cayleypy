@@ -430,7 +430,7 @@ def test_beam_search_lrx_few_steps():
     assert result2.path_found
     assert result2.path_length == 2
     assert result2.path == [0, 2]
-    assert result2.get_path_as_string() == "L∘X"
+    assert result2.get_path_as_string() == "L.X"
 
 
 def test_beam_search_lrx_n8_random():
@@ -473,6 +473,18 @@ def test_beam_search_matrix_groups():
     start_state = [[1, 2, 3], [0, 1, 1], [0, 0, 1]]
     bs_result = graph.beam_search(start_state=start_state, return_path=True)
     _validate_beam_search_result(graph, start_state, bs_result)
+
+
+def test_path_to_from():
+    n = 8
+    graph = CayleyGraph(PermutationGroups.lrx(n))
+    br = graph.bfs(return_all_hashes=True)
+    for _ in range(5):
+        start_state = torch.tensor(np.random.permutation(n))
+        path1 = graph.find_path_from(start_state, br)
+        assert torch.equal(graph.apply_path(start_state, path1)[0], graph.central_state)
+        path2 = graph.find_path_to(start_state, br)
+        assert torch.equal(start_state, graph.apply_path(graph.central_state, path2)[0])
 
 
 # Below is the benchmark code. To run: `BENCHMARK=1 pytest . -k benchmark`
