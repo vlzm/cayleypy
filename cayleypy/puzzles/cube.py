@@ -150,7 +150,63 @@ def full_set_of_perm_cube(cube_size: int) -> Dict[str, list[int]]:
         inv_key = key + "_inv"
         new_dict[inv_key] = inverse_permutation(list(map(int, value.split())))
     return new_dict
+    
+def get_qtm_metric_moves(n: int):
+    """
+    Returns only QTM generators: quarter turns of all layers except central ones (if odd n).
 
+    Arguments:
+        n: Cube size (n x n x n).
+
+    Returns:
+        Dictionary with move names and their one-line permutations.
+    """
+    all_moves = generate_cube_permutations_oneline(n)
+    allowed_moves = {}
+
+    center_layer = (n - 1) // 2 if n % 2 == 1 else None
+
+    for move_name, perm in all_moves.items():
+        move_type = move_name[0]
+        s = int(move_name[1:])
+
+        # Skip central layers only if odd n
+        if center_layer is not None and s == center_layer:
+            continue
+
+        allowed_moves[move_name] = perm
+
+    return allowed_moves
+
+def get_htm_metric_moves(n: int):
+    """
+    Returns HTM generators: quarter and half turns of all layers except the central one (if odd n).
+
+    Arguments:
+        n: Cube size (n x n x n).
+
+    Returns:
+        Dictionary with move names (e.g., 'f0', 'f0_2') and one-line permutations.
+    """
+    all_moves = generate_cube_permutations_oneline(n)
+    allowed_moves = {}
+
+    center_layer = (n - 1) // 2 if n % 2 == 1 else None
+
+    for move_name, perm in all_moves.items():
+        move_type = move_name[0]
+        s = int(move_name[1:])
+
+        if center_layer is not None and s == center_layer:
+            continue
+
+        allowed_moves[move_name] = perm
+        perm_list = list(map(int, perm.split()))
+        perm_twice = [perm_list[perm_list[i]] for i in range(len(perm_list))]
+        move_180_name = f"{move_name}^2"
+        allowed_moves[move_180_name] = ' '.join(map(str, perm_twice))
+
+    return allowed_moves
 
 def rubik_cube_qstm(cube_size: int) -> CayleyGraphDef:
     """Creates Cayley graph for n*n*n Rubik's cube using the QSTM metric."""
@@ -168,39 +224,25 @@ def rubik_cube_qstm(cube_size: int) -> CayleyGraphDef:
 
 def rubik_cube_qtm(cube_size: int) -> CayleyGraphDef:
     """Creates Cayley graph for n*n*n Rubik's cube using the QTM metric."""
-    if cube_size == 2:
-        generators, generator_names = [], []
-        for move_id, perm in CUBE222_MOVES.items():
-            generators += [perm, inverse_permutation(perm)]
-            generator_names += [move_id, move_id + "'"]
-        central_state = [color for color in range(6) for _ in range(4)]
-        return CayleyGraphDef.create(generators, central_state=central_state, generator_names=generator_names)
-    elif cube_size == 3:
-        generators, generator_names = [], []
-        for move_id, perm in CUBE333_MOVES.items():
-            generators += [perm, inverse_permutation(perm)]
-            generator_names += [move_id, move_id + "'"]
-        central_state = [color for color in range(6) for _ in range(9)]
-        return CayleyGraphDef.create(generators, central_state=central_state, generator_names=generator_names)
-    else:
-        raise ValueError(f"Metric QTM not supported for cube size {cube_size}.")
+    if cube_size < 2:
+        raise ValueError(f"Metric HTM not supported for cube size {cube_size}.")
+    generators, generator_names = [], []
+    for move_id, perm in get_qtm_metric_moves(cube_size).items():
+        generators += [perm, inverse_permutation(perm)]
+        generator_names += [move_id, move_id + "'"]
+    central_state = [color for color in range(6) for _ in range(cube_size**2)]    
+    return CayleyGraphDef.create(generators, central_state=central_state, generator_names=generator_names)
 
 
 def rubik_cube_htm(cube_size: int) -> CayleyGraphDef:
     """Creates Cayley graph for n*n*n Rubik's cube using the HTM metric."""
-    if cube_size == 2:
-        generators, generator_names = [], []
-        for move_id, perm in CUBE222_MOVES.items():
-            generators += [perm, inverse_permutation(perm), compose_permutations(perm, perm)]
-            generator_names += [move_id, move_id + "'", move_id + "^2"]
-        central_state = [color for color in range(6) for _ in range(4)]
-        return CayleyGraphDef.create(generators, central_state=central_state, generator_names=generator_names)
-    elif cube_size == 3:
-        generators, generator_names = [], []
-        for move_id, perm in CUBE333_MOVES.items():
-            generators += [perm, inverse_permutation(perm), compose_permutations(perm, perm)]
-            generator_names += [move_id, move_id + "'", move_id + "^2"]
-        central_state = [color for color in range(6) for _ in range(9)]
-        return CayleyGraphDef.create(generators, central_state=central_state, generator_names=generator_names)
-    else:
+    if cube_size < 2:
         raise ValueError(f"Metric HTM not supported for cube size {cube_size}.")
+    generators, generator_names = [], []
+    for move_id, perm in get_htm_metric_moves(cube_size).items():
+        generators += [perm, inverse_permutation(perm)]
+        generator_names += [move_id, move_id + "'"]
+    central_state = [color for color in range(6) for _ in range(cube_size**2)]    
+    return CayleyGraphDef.create(generators, central_state=central_state, generator_names=generator_names)
+
+    
