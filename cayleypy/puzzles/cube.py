@@ -151,7 +151,7 @@ def generate_cube_permutations_oneline(n: int) -> Dict[str, str]:
         output_move_name = move_name
         if move_type == "r":
             output_move_name = f"r{n-1-s}"
-        moves[output_move_name] = " ".join(map(str, p))
+        moves[output_move_name] = p
     sorted_moves = collections.OrderedDict(sorted(moves.items(), key=lambda t: move_names_ordered.index(t[0])))
     return dict(sorted_moves)
 
