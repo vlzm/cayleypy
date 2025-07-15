@@ -22,7 +22,21 @@ CUBE333_MOVES = {
     "B": pfc(54, [[2, 35, 15, 18], [5, 34, 12, 19], [8, 33, 9, 20], [36, 42, 44, 38], [37, 39, 43, 41]]),
     "F": pfc(54, [[0, 24, 17, 29], [3, 25, 14, 28], [6, 26, 11, 27], [45, 51, 53, 47], [46, 48, 52, 50]]),
 }
+def fixed_corner_cub_quarter():
+    generators, generator_names = [], []
+    for move_id, perm in CUBE222_MOVES.items():
+        generators += [perm, inverse_permutation(perm)]
+        generator_names += [move_id, move_id + "'"]
+    central_state = [color for color in range(6) for _ in range(4)]
+    return CayleyGraphDef.create(generators, central_state=central_state, generator_names=generator_names)
 
+def fixed_corner_cub_half():
+    generators, generator_names = [], []
+    for move_id, perm in CUBE222_MOVES.items():
+        generators += [perm, inverse_permutation(perm), compose_permutations(perm, perm)]
+        generator_names += [move_id, move_id + "'", move_id + "^2"]
+    central_state = [color for color in range(6) for _ in range(4)]
+    return CayleyGraphDef.create(generators, central_state=central_state, generator_names=generator_names)
 
 def generate_cube_permutations_oneline(n: int) -> Dict[str, str]:
     """
