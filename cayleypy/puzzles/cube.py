@@ -218,7 +218,7 @@ def get_htm_metric_moves(n: int):
         perm_list = list(map(int, perm.split()))
         perm_twice = [perm_list[perm_list[i]] for i in range(len(perm_list))]
         move_180_name = f"{move_name}^2"
-        allowed_moves[move_180_name] = ' '.join(map(str, perm_twice))
+        allowed_moves[move_180_name] = perm_twice
 
     return allowed_moves
 
