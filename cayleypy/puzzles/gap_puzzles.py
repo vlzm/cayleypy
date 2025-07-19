@@ -111,4 +111,4 @@ class GapPuzzles:
 
 
 if os.getenv("SPHINX_BUILD") == "1":
-    GapPuzzles.__doc__ = "%s\n\n Supported puzzles: %s." % (GapPuzzles.__doc__, GapPuzzles.list_puzzles())
+    GapPuzzles.__doc__ = f"{GapPuzzles.__doc__}\n\n Supported puzzles: {GapPuzzles.list_puzzles()}."
