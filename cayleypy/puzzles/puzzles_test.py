@@ -1,6 +1,6 @@
 import numpy as np
 
-from .moves import MINI_PYRAMORPHIX_ALLOWED_MOVES, PYRAMINX_MOVES, MEGAMINX_MOVES
+from .moves import MINI_PYRAMORPHIX_ALLOWED_MOVES, PYRAMINX_MOVES, MEGAMINX_MOVES, DINO_MOVES
 from .puzzles import Puzzles
 from ..cayley_graph import CayleyGraph
 from ..permutation_utils import is_permutation, inverse_permutation
@@ -55,3 +55,27 @@ def test_megaminx():
 
     graph = CayleyGraph(graph, device="cpu")
     assert graph.bfs(max_diameter=4).layer_sizes == [1, 24, 408, 6208, 90144]
+
+
+def test_dino_puzzle():
+    perm_len = 24
+    graph = Puzzles.dino()
+
+    assert graph.n_generators == len(DINO_MOVES) * 2
+
+    graph_gens = dict(zip(graph.generator_names, graph.generators))
+
+    for gen_name, gen in DINO_MOVES.items():
+        assert np.all(graph_gens[gen_name] == gen)
+
+        inv = inverse_permutation(gen)
+        assert np.all(graph_gens[gen_name + "_inv"] == inv)
+
+        assert len(gen) == perm_len
+        assert is_permutation(gen)
+        assert is_permutation(inv)
+
+        restored = [gen[i] for i in inv]
+        assert restored == list(range(perm_len))
+
+    assert any(not np.array_equal(g, np.arange(perm_len)) for g in graph.generators)

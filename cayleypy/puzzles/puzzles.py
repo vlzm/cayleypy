@@ -1,7 +1,7 @@
 from .cube import rubik_cube_qstm, rubik_cube_htm, rubik_cube_qtm
 from .globe import globe_puzzle
 from .hungarian_rings import hungarian_rings_generators
-from .moves import MINI_PYRAMORPHIX_ALLOWED_MOVES, PYRAMINX_MOVES, STARMINX_MOVES, MEGAMINX_MOVES
+from .moves import MINI_PYRAMORPHIX_ALLOWED_MOVES, PYRAMINX_MOVES, STARMINX_MOVES, MEGAMINX_MOVES, DINO_MOVES
 from ..cayley_graph_def import CayleyGraphDef
 from ..permutation_utils import inverse_permutation
 
@@ -103,5 +103,20 @@ class Puzzles:
         for move_id, perm in MEGAMINX_MOVES.items():
             generators += [perm, inverse_permutation(perm)]
             generator_names += [move_id, move_id + "_inv"]
+        central_state = list(range(len(generators[0])))
+        return CayleyGraphDef.create(generators, central_state=central_state, generator_names=generator_names)
+
+    @staticmethod
+    def dino() -> CayleyGraphDef:
+        """Cayley graph for the Dino Cube puzzle.
+
+        See https://alpha.twizzle.net/explore/?puzzle=dino
+        """
+        generator_names = []
+        generators = []
+        for move_id, perm in DINO_MOVES.items():
+            generators.append(perm)
+            generators.append(inverse_permutation(perm))
+            generator_names.extend([move_id, move_id + "_inv"])
         central_state = list(range(len(generators[0])))
         return CayleyGraphDef.create(generators, central_state=central_state, generator_names=generator_names)
