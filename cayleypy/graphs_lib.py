@@ -257,13 +257,11 @@ class PermutationGroups:
         assert n >= 3
         generators = []
         generator_names = []
-        
         for i in range(n):
             v = list(range(n))
             v[0], v[i] = v[i], v[0]
             generators.append(v)
             generator_names.append(f"S{i}")
-        
         return CayleyGraphDef.create(generators, central_state=list(range(n)), generator_names=generator_names)
 
     @staticmethod
