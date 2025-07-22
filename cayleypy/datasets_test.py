@@ -167,6 +167,13 @@ def test_wrapped_k_cycles_cayley_growth():
         _verify_layers_fast(PermutationGroups.wrapped_k_cycles(n, k), layer_sizes)
 
 
+def test_stars_cayley_growth():
+    for key, layer_sizes in load_dataset("stars_cayley_growth").items():
+        n = int(key)
+        assert sum(layer_sizes) == math.factorial(n)
+        _verify_layers_fast(PermutationGroups.stars(n), layer_sizes)
+
+
 def test_hungarian_rings_growth():
     for key, layer_sizes in load_dataset("hungarian_rings_growth").items():
         parameters = list(map(int, key.split(",")))
