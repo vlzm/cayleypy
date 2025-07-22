@@ -249,3 +249,8 @@ def test_all_cycles():
     assert PermutationGroups.all_cycles(4).n_generators == 20
     assert PermutationGroups.all_cycles(5).n_generators == 84
     assert PermutationGroups.all_cycles(6).n_generators == 409
+
+
+def test_wrapped_k_cycles():
+    graph = PermutationGroups.wrapped_k_cycles(5, 3)
+    assert graph.generators == [[1, 2, 0, 3, 4], [0, 2, 3, 1, 4], [0, 1, 3, 4, 2], [3, 1, 2, 4, 0], [1, 4, 2, 3, 0]]
