@@ -78,7 +78,15 @@ class PermutationGroups:
         assert n >= 3
         generators = [list(range(1, n)) + [0], [n - 1] + list(range(0, n - 1)), transposition(n, 0, k)]
         generator_names = ["L", "R", "X"]
-        return CayleyGraphDef.create(generators, central_state=list(range(n)), generator_names=generator_names)
+        name = f"lrx-{n}"
+        if k != 1:
+            name += f"(k={k})"
+        return CayleyGraphDef.create(
+            generators,
+            central_state=list(range(n)),
+            generator_names=generator_names,
+            name=name,
+        )
 
     @staticmethod
     def lx(n: int) -> CayleyGraphDef:
@@ -93,7 +101,9 @@ class PermutationGroups:
         assert n >= 3
         generators = [list(range(1, n)) + [0], transposition(n, 0, 1)]
         generator_names = ["L", "X"]
-        return CayleyGraphDef.create(generators, central_state=list(range(n)), generator_names=generator_names)
+        return CayleyGraphDef.create(
+            generators, central_state=list(range(n)), generator_names=generator_names, name=f"lx-{n}"
+        )
 
     @staticmethod
     def top_spin(n: int, k: int = 4):

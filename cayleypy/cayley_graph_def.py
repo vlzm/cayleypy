@@ -100,12 +100,14 @@ class CayleyGraphDef:
     generators_matrices: list[MatrixGenerator]
     generator_names: list[str]
     central_state: list[int]
+    name: str
 
     @staticmethod
     def create(
         generators: Union[list[list[int]], torch.Tensor, np.ndarray],
         generator_names: Optional[list[str]] = None,
         central_state: Union[list[int], torch.Tensor, np.ndarray, str, None] = None,
+        name: str = "",
     ):
         """Creates Cayley Graph definition (when generators are permutations).
 
@@ -140,7 +142,7 @@ class CayleyGraphDef:
         else:
             central_state = CayleyGraphDef.normalize_central_state(central_state)
 
-        return CayleyGraphDef(GeneratorType.PERMUTATION, generators_list, [], generator_names, central_state)
+        return CayleyGraphDef(GeneratorType.PERMUTATION, generators_list, [], generator_names, central_state, name)
 
     @staticmethod
     def for_matrix_group(
@@ -148,6 +150,7 @@ class CayleyGraphDef:
         generators: list[MatrixGenerator],
         generator_names: Optional[list[str]] = None,
         central_state: Union[np.ndarray, list[list[int]], list[int], None] = None,
+        name: str = "",
     ):
         """Creates Cayley Graph definition (when generators are matrices).
 
@@ -163,7 +166,7 @@ class CayleyGraphDef:
         central_state_list = CayleyGraphDef.normalize_central_state(central_state)
         n = generators[0].n
         assert len(central_state) % n == 0, "Wrong size of central state."
-        return CayleyGraphDef(GeneratorType.MATRIX, [], generators, generator_names, central_state_list)
+        return CayleyGraphDef(GeneratorType.MATRIX, [], generators, generator_names, central_state_list, name)
 
     def __post_init__(self):
         # Validation.

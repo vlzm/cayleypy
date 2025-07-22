@@ -4,7 +4,8 @@ import numpy as np
 import pytest
 import torch
 
-from . import BeamSearchResult
+from .beam_search_result import BeamSearchResult
+from .predictor import Predictor
 from .bfs_numpy import bfs_numpy
 from .cayley_graph import CayleyGraph
 from .cayley_graph_def import MatrixGenerator, CayleyGraphDef
@@ -449,6 +450,14 @@ def test_beam_search_mini_pyramorphix():
     bs_result = graph.beam_search(start_state=start_state, beam_width=10**7, return_path=True)
     assert bs_result.path_length <= 5
     _validate_beam_search_result(graph, start_state, bs_result)
+
+
+def test_beam_search_lrx_32():
+    graph = CayleyGraph(PermutationGroups.lrx(32))
+    predictor = Predictor.pretrained(graph)
+    state = graph.random_walks(width=1, length=100)[0][-1]
+    result = graph.beam_search(start_state=state, predictor=predictor)
+    assert result.path_found
 
 
 @pytest.mark.skipif(not RUN_SLOW_TESTS, reason="slow test")

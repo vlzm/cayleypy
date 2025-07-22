@@ -4,6 +4,8 @@ from typing import Callable
 
 import torch
 
+from .models.models_lib import MODELS
+
 if typing.TYPE_CHECKING:
     from .cayley_graph import CayleyGraph
 
@@ -44,6 +46,14 @@ class Predictor:
             self.predict = models_or_heuristics
         else:
             raise ValueError(f"Unable to understand how to call {models_or_heuristics}")
+
+    @staticmethod
+    def pretrained(graph: "CayleyGraph"):
+        """Loads pre-trained predictor for this graph."""
+        if graph.definition.name not in MODELS:
+            raise KeyError("No pretrained model for this graph.")
+        model = MODELS[graph.definition.name].load(graph.device)
+        return Predictor(graph, model)
 
     def __call__(self, states: torch.Tensor) -> torch.Tensor:
         num_batches = int(math.ceil(states.shape[0] / self.graph.batch_size))

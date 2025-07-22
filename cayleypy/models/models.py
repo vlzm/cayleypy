@@ -1,6 +1,6 @@
-import os.path
+import os
 from dataclasses import dataclass
-from typing import Optional
+from typing import Any, Optional, Union
 
 import kagglehub
 import torch
@@ -19,7 +19,7 @@ class ModelConfig:
     weights_path: Optional[str]
 
     @staticmethod
-    def from_dict(cfg: dict[str, any]):
+    def from_dict(cfg: dict[str, Any]):
         """Creates config from Python dict."""
         return ModelConfig(
             model_type=cfg["model_type"],
