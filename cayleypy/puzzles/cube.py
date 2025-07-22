@@ -310,8 +310,12 @@ def rubik_cube_htm(cube_size: int) -> CayleyGraphDef:
         raise ValueError(f"Metric HTM not supported for cube size {cube_size}.")
     generators, generator_names = [], []
     for move_id, perm in get_htm_metric_moves(cube_size).items():
-        generators += [perm, inverse_permutation(perm)]
-        generator_names += [move_id, move_id + "'"]
+        if "^2" not in move_id:
+            generators += [perm, inverse_permutation(perm)]
+            generator_names += [move_id, move_id + "'"]
+        else:
+            generators += [perm]
+            generator_names += [move_id]
     central_state = [color for color in range(6) for _ in range(cube_size**2)]    
     return CayleyGraphDef.create(generators, central_state=central_state, generator_names=generator_names)
 
@@ -321,8 +325,8 @@ def rubik_cube_atm(cube_size: int) -> CayleyGraphDef:
         raise ValueError(f"Metric ATM not supported for cube size {cube_size}.")
     generators, generator_names = [], []
     for move_id, perm in get_atm_metric_moves(cube_size).items():
-        generators += [perm, inverse_permutation(perm)]
-        generator_names += [move_id, move_id + "'"]
+        generators += [perm]
+        generator_names += [move_id]
     central_state = [color for color in range(6) for _ in range(cube_size**2)]    
     return CayleyGraphDef.create(generators, central_state=central_state, generator_names=generator_names)
 
