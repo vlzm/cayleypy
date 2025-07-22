@@ -342,12 +342,7 @@ class PermutationGroups:
         generator_names = []
         for start in range(n):
             cycle = [(start + j) % n for j in range(k)]
-
-            perm = list(range(n))
-            for idx in range(k - 1):
-                perm[cycle[idx]] = cycle[idx + 1]
-            perm[cycle[-1]] = cycle[0]
-            generators.append(perm)
+            generators.append(permutation_from_cycles(n, [cycle]))
             generator_names.append(f"({' '.join(map(str, cycle))})")
         return CayleyGraphDef.create(generators, central_state=list(range(n)), generator_names=generator_names)
 
