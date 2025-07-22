@@ -1,6 +1,8 @@
+# pylint: disable=not-callable
+
 import os
 from dataclasses import dataclass
-from typing import Any, Optional, Union
+from typing import Any, Optional
 
 import kagglehub
 import torch
@@ -52,7 +54,7 @@ class MlpModel(nn.Module):
     """Multi-layer perceptron model."""
 
     def __init__(self, config):
-        super(MlpModel, self).__init__()
+        super().__init__()
         assert config.model_type == "MLP"
         self.num_classes_for_one_hot = config.num_classes_for_one_hot
         self.input_layer_size = config.input_size * self.num_classes_for_one_hot

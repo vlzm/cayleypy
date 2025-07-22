@@ -260,6 +260,7 @@ class CayleyGraphDef:
             self.generators_matrices,
             self.generator_names,
             CayleyGraphDef.normalize_central_state(central_state),
+            self.name,
         )
 
     def is_permutation_group(self):
