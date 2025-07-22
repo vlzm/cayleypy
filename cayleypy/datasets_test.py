@@ -178,8 +178,8 @@ def test_heisenberg_growth():
 
 def test_puzzles_growth():
     data = load_dataset("puzzles_growth")
-    _verify_layers_fast(Puzzles.rubik_cube(2, metric="HTM"), data["cube_222_htm"])
-    _verify_layers_fast(Puzzles.rubik_cube(2, metric="QTM"), data["cube_222_qtm"])
+    _verify_layers_fast(Puzzles.rubik_cube(2, metric="fixed_HTM"), data["cube_222_htm"])
+    _verify_layers_fast(Puzzles.rubik_cube(2, metric="fixed_QTM"), data["cube_222_qtm"])
     _verify_layers_fast(Puzzles.rubik_cube(3, metric="HTM"), data["cube_333_htm"])
     _verify_layers_fast(Puzzles.rubik_cube(3, metric="QTM"), data["cube_333_qtm"])
     _verify_layers_fast(Puzzles.rubik_cube(2, metric="QSTM"), data["cube_222_qstm"])
