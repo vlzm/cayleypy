@@ -115,6 +115,7 @@ class CayleyGraphDef:
         :param generator_names: Names of the generators (optional).
         :param central_state: List of n numbers between 0 and n-1, the central state.
                  If None, defaults to the identity permutation of size n.
+        :param name: Name of this graph.
         """
         # Prepare generators.
         if isinstance(generators, list):
@@ -157,6 +158,7 @@ class CayleyGraphDef:
         :param generators: List of generating n*n matrices.
         :param generator_names: Names of the generators (optional).
         :param central_state: the central state (n*m matrix). Defaults to the n*n identity matrix.
+        :param name: Name of this graph.
         """
         if generator_names is None:
             generator_names = ["g" + str(i) for i in range(len(generators))]

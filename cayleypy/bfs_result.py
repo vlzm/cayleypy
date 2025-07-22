@@ -92,6 +92,7 @@ class BfsResult:
             f["graph__generators"] = self.graph.generators
             f["graph__generator_names"] = self.graph.generator_names
             f["graph__central_state"] = self.graph.central_state
+            f["graph__name"] = self.graph.name
 
     @staticmethod
     def load(path: str):
@@ -121,6 +122,7 @@ class BfsResult:
                     generators=f["graph__generators"][()].tolist(),
                     generator_names=[x.decode("utf-8") for x in f["graph__generator_names"][()]],
                     central_state=f["graph__central_state"][()].tolist(),
+                    name=f["graph__name"][()].decode("utf-8"),
                 ),
             )
         # pylint: enable=no-member
