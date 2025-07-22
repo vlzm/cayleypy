@@ -3,6 +3,9 @@
 from typing import Any, Sequence
 
 
+def identity_perm(n: int) -> list[int]:
+    return list(range(p))
+
 def apply_permutation(p: Any, x: Sequence[Any]) -> list[Any]:
     return [x[p[i]] for i in range(len(p))]
 
