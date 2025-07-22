@@ -4,6 +4,7 @@ from typing import Dict
 from ..cayley_graph import CayleyGraphDef
 from ..permutation_utils import (
     compose_permutations,
+    identity_perm,
     permutation_from_cycles as pfc,
     inverse_permutation,
 )
@@ -248,13 +249,13 @@ def get_atm_metric_moves(n: int):
 
     for name in slice_names_x:
         p_cw = [int(x) for x in base_slice_perms_str[name].split()]
-        axis_slice_perms['X'].append({'cw': p_cw, 'ccw': inverse_perm(p_cw)})
+        axis_slice_perms['X'].append({'cw': p_cw, 'ccw': inverse_permutation(p_cw)})
     for name in slice_names_y:
         p_cw = [int(x) for x in base_slice_perms_str[name].split()]
-        axis_slice_perms['Y'].append({'cw': p_cw, 'ccw': inverse_perm(p_cw)})
+        axis_slice_perms['Y'].append({'cw': p_cw, 'ccw': inverse_permutation(p_cw)})
     for name in slice_names_z:
         p_cw = [int(x) for x in base_slice_perms_str[name].split()]
-        axis_slice_perms['Z'].append({'cw': p_cw, 'ccw': inverse_perm(p_cw)})
+        axis_slice_perms['Z'].append({'cw': p_cw, 'ccw': inverse_permutation(p_cw)})
     all_atm_moves = {}
     for axis_name, slices in axis_slice_perms.items():
         state_combinations = itertools.product([0, 1, 2], repeat=n)
@@ -267,10 +268,10 @@ def get_atm_metric_moves(n: int):
             for i, state in enumerate(combo):
                 slice_name = f"s{i}" 
                 if state == 1: # CW
-                    current_perm = multperm(slices[i]['cw'], current_perm)
+                    current_perm = compose_permutations(slices[i]['cw'], current_perm)
                     move_name_parts.append(f"{slice_name}_cw")
                 elif state == 2: # CCW
-                    current_perm = multperm(slices[i]['ccw'], current_perm)
+                    current_perm = compose_permutations(slices[i]['ccw'], current_perm)
                     move_name_parts.append(f"{slice_name}_ccw")
             
             final_move_name = f"axis_{axis_name}_" + "_".join(move_name_parts)
