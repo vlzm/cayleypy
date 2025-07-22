@@ -24,7 +24,7 @@ CUBE333_MOVES = {
     "B": pfc(54, [[2, 35, 15, 18], [5, 34, 12, 19], [8, 33, 9, 20], [36, 42, 44, 38], [37, 39, 43, 41]]),
     "F": pfc(54, [[0, 24, 17, 29], [3, 25, 14, 28], [6, 26, 11, 27], [45, 51, 53, 47], [46, 48, 52, 50]]),
 }
-def fixed_corner_cub_quarter():
+def fixed_corner_cub_quarter() -> CayleyGraphDef:
     generators, generator_names = [], []
     for move_id, perm in CUBE222_MOVES.items():
         generators += [perm, inverse_permutation(perm)]
@@ -32,7 +32,7 @@ def fixed_corner_cub_quarter():
     central_state = [color for color in range(6) for _ in range(4)]
     return CayleyGraphDef.create(generators, central_state=central_state, generator_names=generator_names)
 
-def fixed_corner_cub_half():
+def fixed_corner_cub_half() -> CayleyGraphDef:
     generators, generator_names = [], []
     for move_id, perm in CUBE222_MOVES.items():
         generators += [perm, inverse_permutation(perm), compose_permutations(perm, perm)]
@@ -167,7 +167,7 @@ def full_set_of_perm_cube(cube_size: int) -> Dict[str, list[int]]:
         new_dict[inv_key] = inverse_permutation(list(map(int, value.split())))
     return new_dict
     
-def get_qtm_metric_moves(n: int):
+def get_qtm_metric_moves(n: int) -> Dict[str, list[int]]:
     """
     Returns only QTM generators: quarter turns of all layers except central ones (if odd n).
 
@@ -195,7 +195,7 @@ def get_qtm_metric_moves(n: int):
 
     return allowed_moves
 
-def get_htm_metric_moves(n: int):
+def get_htm_metric_moves(n: int) -> Dict[str, list[int]]:
     """
     Returns HTM generators: quarter and half turns of all layers except the central one (if odd n).
 
@@ -225,7 +225,7 @@ def get_htm_metric_moves(n: int):
 
     return allowed_moves
 
-def get_atm_metric_moves(n: int):
+def get_atm_metric_moves(n: int) -> Dict[str, list[int]]:
     """
     Generates all possible moves (generators) for an n x n x n cube in ATM metric.
     Arguments:
