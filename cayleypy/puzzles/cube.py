@@ -1,5 +1,6 @@
 import collections
 from typing import Dict
+import itertools
 
 from ..cayley_graph import CayleyGraphDef
 from ..permutation_utils import (
