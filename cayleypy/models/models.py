@@ -45,7 +45,7 @@ class ModelConfig:
                 model_dir = kagglehub.model_download(self.weights_kaggle_id)
                 path = os.path.join(model_dir, path)
             model.load_state_dict(torch.load(path, map_location=device))
-        return model
+        return model.to(device)
 
 
 class MlpModel(nn.Module):
