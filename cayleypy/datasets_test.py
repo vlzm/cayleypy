@@ -161,6 +161,12 @@ def test_rapaport_m2_cayley_growth():
         _verify_layers_fast(PermutationGroups.rapaport_m2(n), layer_sizes)
 
 
+def test_wrapped_k_cycles_cayley_growth():
+    for key, layer_sizes in load_dataset("wrapped_k_cycles_cayley_growth").items():
+        n, k = map(int, key.split(","))
+        _verify_layers_fast(PermutationGroups.wrapped_k_cycles(n, k), layer_sizes)
+
+
 def test_hungarian_rings_growth():
     for key, layer_sizes in load_dataset("hungarian_rings_growth").items():
         parameters = list(map(int, key.split(",")))
