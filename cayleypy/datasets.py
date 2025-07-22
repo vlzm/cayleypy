@@ -155,6 +155,10 @@ def _compute_wrapped_k_cycles_cayley_growth(key: str) -> list[int]:
     return CayleyGraph(PermutationGroups.wrapped_k_cycles(n, k)).bfs().layer_sizes
 
 
+def _compute_stars_cayley_growth(n: str) -> list[int]:
+    return CayleyGraph(PermutationGroups.stars(int(n))).bfs().layer_sizes
+
+
 def generate_datasets():
     """Generates datasets for small n, keeping existing values."""
     keys = []
@@ -193,3 +197,5 @@ def generate_datasets():
     _update_dataset("all_cycles_cayley_growth", keys, _compute_all_cycles_cayley_growth)
     keys = [f"{n},{k}" for n in range(2, 10) for k in range(2, n + 1)]
     _update_dataset("wrapped_k_cycles_cayley_growth", keys, _compute_wrapped_k_cycles_cayley_growth)
+    keys = [str(n) for n in range(3, 12)]
+    _update_dataset("stars_cayley_growth", keys, _compute_stars_cayley_growth)
