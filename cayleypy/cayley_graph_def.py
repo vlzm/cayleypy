@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import Enum
 from functools import cached_property
 from typing import Optional, Union, Any
@@ -256,14 +256,10 @@ class CayleyGraphDef:
         return [int(x) for x in central_state]
 
     def with_central_state(self, central_state) -> "CayleyGraphDef":
-        return CayleyGraphDef(
-            self.generators_type,
-            self.generators_permutations,
-            self.generators_matrices,
-            self.generator_names,
-            CayleyGraphDef.normalize_central_state(central_state),
-            self.name,
-        )
+        return replace(self, central_state=CayleyGraphDef.normalize_central_state(central_state))
+
+    def with_name(self, name: str) -> "CayleyGraphDef":
+        return replace(self, name=name)
 
     def is_permutation_group(self):
         """Whether generators in this graph are permutations."""

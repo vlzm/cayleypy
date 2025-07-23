@@ -118,7 +118,8 @@ class PermutationGroups:
             [n - 1] + list(range(0, n - 1)),
             list(range(k - 1, -1, -1)) + list(range(k, n)),
         ]
-        return CayleyGraphDef.create(generators, central_state=list(range(n)))
+        name = f"top_spin-{n}-{k}"
+        return CayleyGraphDef.create(generators, central_state=list(range(n)), name=name)
 
     @staticmethod
     def coxeter(n: int) -> CayleyGraphDef:
@@ -130,7 +131,10 @@ class PermutationGroups:
         generators = _create_coxeter_generators(n)
         generator_names = [f"({i},{i + 1})" for i in range(n - 1)]
         central_state = list(range(n))
-        return CayleyGraphDef.create(generators, central_state=central_state, generator_names=generator_names)
+        name = f"coxeter-{n}"
+        return CayleyGraphDef.create(
+            generators, central_state=central_state, generator_names=generator_names, name=name
+        )
 
     @staticmethod
     def cyclic_coxeter(n: int) -> CayleyGraphDef:
@@ -142,7 +146,10 @@ class PermutationGroups:
         generators = _create_coxeter_generators(n) + [transposition(n, 0, n - 1)]
         generator_names = [f"({i},{i + 1})" for i in range(n - 1)] + [f"(0,{n - 1})"]
         central_state = list(range(n))
-        return CayleyGraphDef.create(generators, central_state=central_state, generator_names=generator_names)
+        name = f"cyclic_coxeter-{n}"
+        return CayleyGraphDef.create(
+            generators, central_state=central_state, generator_names=generator_names, name=name
+        )
 
     @staticmethod
     def pancake(n: int) -> CayleyGraphDef:
@@ -158,7 +165,10 @@ class PermutationGroups:
             perm = list(range(prefix_len - 1, -1, -1)) + list(range(prefix_len, n))
             generators.append(perm)
             generator_names.append("R" + str(prefix_len - 1))
-        return CayleyGraphDef.create(generators, central_state=list(range(n)), generator_names=generator_names)
+        name = f"pancake-{n}"
+        return CayleyGraphDef.create(
+            generators, central_state=list(range(n)), generator_names=generator_names, name=name
+        )
 
     @staticmethod
     def cubic_pancake(n: int, subset: int) -> CayleyGraphDef:
