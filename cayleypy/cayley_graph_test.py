@@ -460,6 +460,7 @@ def test_beam_search_lrx_16():
     assert result.path_found
 
 
+@pytest.mark.skipif(not RUN_SLOW_TESTS, reason="slow test")
 def test_beam_search_lrx_32():
     graph = CayleyGraph(PermutationGroups.lrx(32))
     predictor = Predictor.pretrained(graph)

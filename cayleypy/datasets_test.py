@@ -173,7 +173,7 @@ def test_stars_cayley_growth():
         assert sum(layer_sizes) == math.factorial(n)
         _verify_layers_fast(PermutationGroups.stars(n), layer_sizes)
 
-
+@pytest.mark.skipif(not RUN_SLOW_TESTS, reason="slow test")
 def test_hungarian_rings_growth():
     for key, layer_sizes in load_dataset("hungarian_rings_growth").items():
         parameters = list(map(int, key.split(",")))
