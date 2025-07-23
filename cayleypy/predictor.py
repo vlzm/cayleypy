@@ -4,7 +4,7 @@ from typing import Callable
 
 import torch
 
-from .models.models_lib import MODELS
+from .models.models_lib import PREDICTOR_MODELS
 
 if typing.TYPE_CHECKING:
     from .cayley_graph import CayleyGraph
@@ -50,9 +50,9 @@ class Predictor:
     @staticmethod
     def pretrained(graph: "CayleyGraph"):
         """Loads pre-trained predictor for this graph."""
-        if graph.definition.name not in MODELS:
+        if graph.definition.name not in PREDICTOR_MODELS:
             raise KeyError("No pretrained model for this graph.")
-        model = MODELS[graph.definition.name].load(graph.device)
+        model = PREDICTOR_MODELS[graph.definition.name].load(graph.device)
         return Predictor(graph, model)
 
     def __call__(self, states: torch.Tensor) -> torch.Tensor:

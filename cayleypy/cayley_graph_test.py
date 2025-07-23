@@ -452,10 +452,18 @@ def test_beam_search_mini_pyramorphix():
     _validate_beam_search_result(graph, start_state, bs_result)
 
 
+def test_beam_search_lrx_16():
+    graph = CayleyGraph(PermutationGroups.lrx(16))
+    predictor = Predictor.pretrained(graph)
+    state = _scramble(graph, 120)
+    result = graph.beam_search(start_state=state, predictor=predictor)
+    assert result.path_found
+
+
 def test_beam_search_lrx_32():
     graph = CayleyGraph(PermutationGroups.lrx(32))
     predictor = Predictor.pretrained(graph)
-    state = graph.random_walks(width=1, length=100)[0][-1]
+    state = _scramble(graph, 496)
     result = graph.beam_search(start_state=state, predictor=predictor)
     assert result.path_found
 

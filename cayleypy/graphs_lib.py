@@ -398,6 +398,8 @@ def prepare_graph(name: str, n: int = 0) -> CayleyGraphDef:
         return Puzzles.megaminx()
     elif name == "lrx":
         return PermutationGroups.lrx(n)
+    elif name.startswith("lrx-"):
+        return PermutationGroups.lrx(int(name[4:]))
     elif name == "top_spin":
         return PermutationGroups.top_spin(n)
     elif name == "all_transpositions":
