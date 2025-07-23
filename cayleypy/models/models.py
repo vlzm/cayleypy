@@ -17,8 +17,8 @@ class ModelConfig:
     input_size: int
     num_classes_for_one_hot: int
     layers_sizes: list[int]
-    weights_kaggle_id: Optional[str]
-    weights_path: Optional[str]
+    weights_kaggle_id: Optional[str] = None
+    weights_path: Optional[str] = None
 
     @staticmethod
     def from_dict(cfg: dict[str, Any]):
