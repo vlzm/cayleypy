@@ -78,7 +78,15 @@ class PermutationGroups:
         assert n >= 3
         generators = [list(range(1, n)) + [0], [n - 1] + list(range(0, n - 1)), transposition(n, 0, k)]
         generator_names = ["L", "R", "X"]
-        return CayleyGraphDef.create(generators, central_state=list(range(n)), generator_names=generator_names)
+        name = f"lrx-{n}"
+        if k != 1:
+            name += f"(k={k})"
+        return CayleyGraphDef.create(
+            generators,
+            central_state=list(range(n)),
+            generator_names=generator_names,
+            name=name,
+        )
 
     @staticmethod
     def lx(n: int) -> CayleyGraphDef:
@@ -93,7 +101,9 @@ class PermutationGroups:
         assert n >= 3
         generators = [list(range(1, n)) + [0], transposition(n, 0, 1)]
         generator_names = ["L", "X"]
-        return CayleyGraphDef.create(generators, central_state=list(range(n)), generator_names=generator_names)
+        return CayleyGraphDef.create(
+            generators, central_state=list(range(n)), generator_names=generator_names, name=f"lx-{n}"
+        )
 
     @staticmethod
     def top_spin(n: int, k: int = 4):
@@ -108,7 +118,8 @@ class PermutationGroups:
             [n - 1] + list(range(0, n - 1)),
             list(range(k - 1, -1, -1)) + list(range(k, n)),
         ]
-        return CayleyGraphDef.create(generators, central_state=list(range(n)))
+        name = f"top_spin-{n}-{k}"
+        return CayleyGraphDef.create(generators, central_state=list(range(n)), name=name)
 
     @staticmethod
     def coxeter(n: int) -> CayleyGraphDef:
@@ -120,7 +131,10 @@ class PermutationGroups:
         generators = _create_coxeter_generators(n)
         generator_names = [f"({i},{i + 1})" for i in range(n - 1)]
         central_state = list(range(n))
-        return CayleyGraphDef.create(generators, central_state=central_state, generator_names=generator_names)
+        name = f"coxeter-{n}"
+        return CayleyGraphDef.create(
+            generators, central_state=central_state, generator_names=generator_names, name=name
+        )
 
     @staticmethod
     def cyclic_coxeter(n: int) -> CayleyGraphDef:
@@ -132,7 +146,10 @@ class PermutationGroups:
         generators = _create_coxeter_generators(n) + [transposition(n, 0, n - 1)]
         generator_names = [f"({i},{i + 1})" for i in range(n - 1)] + [f"(0,{n - 1})"]
         central_state = list(range(n))
-        return CayleyGraphDef.create(generators, central_state=central_state, generator_names=generator_names)
+        name = f"cyclic_coxeter-{n}"
+        return CayleyGraphDef.create(
+            generators, central_state=central_state, generator_names=generator_names, name=name
+        )
 
     @staticmethod
     def pancake(n: int) -> CayleyGraphDef:
@@ -148,7 +165,10 @@ class PermutationGroups:
             perm = list(range(prefix_len - 1, -1, -1)) + list(range(prefix_len, n))
             generators.append(perm)
             generator_names.append("R" + str(prefix_len - 1))
-        return CayleyGraphDef.create(generators, central_state=list(range(n)), generator_names=generator_names)
+        name = f"pancake-{n}"
+        return CayleyGraphDef.create(
+            generators, central_state=list(range(n)), generator_names=generator_names, name=name
+        )
 
     @staticmethod
     def cubic_pancake(n: int, subset: int) -> CayleyGraphDef:
@@ -388,6 +408,8 @@ def prepare_graph(name: str, n: int = 0) -> CayleyGraphDef:
         return Puzzles.megaminx()
     elif name == "lrx":
         return PermutationGroups.lrx(n)
+    elif name.startswith("lrx-"):
+        return PermutationGroups.lrx(int(name[4:]))
     elif name == "top_spin":
         return PermutationGroups.top_spin(n)
     elif name == "all_transpositions":

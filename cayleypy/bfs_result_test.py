@@ -53,4 +53,5 @@ def test_bfs_result_save_load():
                     )
                     bfs_result.save(temp_dir / "bfs_result.h5")
                     loaded_bfs_result = BfsResult.load(temp_dir / "bfs_result.h5")
+                    assert bfs_result.graph == loaded_bfs_result.graph
                     assert bfs_result == loaded_bfs_result, "Original and loaded BfsResults must be the same."

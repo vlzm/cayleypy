@@ -7,10 +7,12 @@ def test_lrx():
     graph = PermutationGroups.lrx(4)
     assert np.array_equal(graph.generators, [[1, 2, 3, 0], [3, 0, 1, 2], [1, 0, 2, 3]])
     assert graph.generator_names == ["L", "R", "X"]
+    assert graph.name == "lrx-4"
 
     graph = PermutationGroups.lrx(5, k=3)
     assert np.array_equal(graph.generators, [[1, 2, 3, 4, 0], [4, 0, 1, 2, 3], [3, 1, 2, 0, 4]])
     assert graph.generator_names == ["L", "R", "X"]
+    assert graph.name == "lrx-5(k=3)"
 
 
 def test_top_spin():

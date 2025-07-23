@@ -75,7 +75,9 @@ class Puzzles:
             generators += [perm, inverse_permutation(perm)]
             generator_names += [move_id, move_id + "_inv"]
         central_state = list(range(len(generators[0])))
-        return CayleyGraphDef.create(generators, central_state=central_state, generator_names=generator_names)
+        return CayleyGraphDef.create(
+            generators, central_state=central_state, generator_names=generator_names, name="pyraminx"
+        )
 
     @staticmethod
     def starminx() -> CayleyGraphDef:

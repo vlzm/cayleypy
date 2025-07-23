@@ -51,6 +51,8 @@ See the following Kaggle notebooks for examples of library usage:
   * [Finidng shortest paths for LRX (n=8) using BFS](https://www.kaggle.com/code/fedimser/lrx-solution).
   * [Finidng shortest paths for LRX cosets (n=16 and n=32) using BFS](https://www.kaggle.com/code/fedimser/lrx-binary-with-cayleypy-bfs-only).
   * [Beam search with neural network for LRX cosets (n=32)](https://www.kaggle.com/code/fedimser/solve-lrx-binary-with-cayleypy).
+  * [Beam search for LRX, n=16](https://www.kaggle.com/code/fedimser/lrx-solution-n-16-beamsearch). 
+  * [Beam search for LRX, n=32](https://www.kaggle.com/code/fedimser/lrx-solution-n-32-beamsearch)
 * Growth function computations:
   * [For LX](https://www.kaggle.com/code/fedimser/growth-function-for-lx-cayley-graph).
   * [For TopSpin cosets](https://www.kaggle.com/code/fedimser/growth-functions-for-topspin-cosets).
@@ -145,6 +147,44 @@ When you are ready, do the following:
 4. Add a test that creates an instance of your graph for small size and checks something about it 
      (at least check number of generators).
 5. Create a pull request.
+
+## Predictor models
+
+CayleyPy contains a library of machine learning models to be used as predictors in the beam search algorithm for
+finding paths in Cayley graph. These models can be easily accessed using `Predictor.pretrained`
+([example](https://www.kaggle.com/code/fedimser/lrx-solution-n-32-beamsearch)).
+
+Each such model is a PyTorch neural network which consists of 3 parts: 
+* Model architecture description (a subclass of `nn.Models`) - defined in `cayleypy/models.py`.
+* Model architecture hyperparameters (such as input size or sizes of hidden layers) - defined by `models.ModelConfig`.
+* Model weights - these are stored on Kaggle.
+
+List of currently available models is 
+[here](https://github.com/cayleypy/cayleypy/blob/main/cayleypy/models/models_lib.py).
+
+### How to add a new predictor model
+1. Train your model.
+2. Verify that when used with beam search, it reliably finds the paths.
+3. Export weights to a file (using `torch.save(model.state_dict(), path)`.
+4. Upload weights as model on Kaggle, make it public and use opensource license (MIT license is recommended).
+5. Make sure the graph for which your model should be used has unique name (that is, `CayleyGraphDef.name`). For
+    example, `PermutationGroups.lrx(16)` has name "lrx-16". Also `prepare_graph` given this name should return
+    this graph (this is needed for tests).
+6. Define `ModelConfig` for your model:
+    * `weights_kaggle_id` is identifier of your saved model on Kaggle. This is what you would pass to 
+      `kagglehub.model_download`.
+    * `weights_path` is the name of file with weights.
+    * If your can be exactly described by one of available model types in `models/models.py`, use that model type
+        with appropriate hyperparameters. If needed, add new hyperparameters to ModelConfig.
+    * If your model architecture is very different from we already have in library, define new model type for it.
+    * For example, we already have model type "MLP" (multi-layer perceptron) defined by `MlpModel` with the following
+        parameters: `input_size`, `num_classes_for_one_hot`, `layers_sizes`.
+7. Verify that when you define your model config, call `load` on it and then use that as preditor in beam search,
+    it works.
+8. Add your model to `PREDICTOR_MODELS` in `models_lib`. Use graph name as a key.
+9. Run `pytest cayleypy/models/models_lib_test.py`. This will check that your model can be loaded from Kaggle and used
+    for inference (i.e. has correct input and output shape), but it doesn't check quality of your model.
+9. Optionally, add a test that beam search with your model successfully finds a path.
 
 ## Credits
 

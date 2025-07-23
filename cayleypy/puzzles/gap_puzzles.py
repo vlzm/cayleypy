@@ -103,7 +103,7 @@ class GapPuzzles:
         """Loads puzzle by name."""
         file_name = str(GapPuzzles.get_gaps_dir() / "defaults" / f"{puzzle_name}.gap")
         try:
-            return GapPuzzles.load_puzzle_from_file(file_name)
+            return GapPuzzles.load_puzzle_from_file(file_name).with_name(puzzle_name)
         except FileNotFoundError as exc:
             raise ValueError(
                 f"No such puzzle {puzzle_name}. Use GapPuzzles.list_puzzles() to see list of available puzzles."

@@ -26,14 +26,15 @@ Graphs library
     cayleypy.Puzzles
     cayleypy.GapPuzzles
 
-Beam search
-'''''''''''
+Beam search and ML
+''''''''''''''''''
 
 .. autosummary::
     :toctree: generated/
 
     cayleypy.BeamSearchResult
     cayleypy.Predictor
+    cayleypy.models.ModelConfig
 
 Special BFS algorithms
 ''''''''''''''''''''''
