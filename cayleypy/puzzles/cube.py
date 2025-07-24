@@ -188,7 +188,6 @@ def get_qtm_metric_moves(n: int) -> Dict[str, list[int]]:
     center_layer = (n - 1) // 2 if n % 2 == 1 else None
 
     for move_name, perm in all_moves.items():
-        move_type = move_name[0]
         s = int(move_name[1:])
 
         # Skip central layers only if odd n
@@ -217,7 +216,6 @@ def get_htm_metric_moves(n: int) -> Dict[str, list[int]]:
     center_layer = (n - 1) // 2 if n % 2 == 1 else None
 
     for move_name, perm in all_moves.items():
-        move_type = move_name[0]
         s = int(move_name[1:])
 
         if center_layer is not None and s == center_layer:
@@ -246,7 +244,11 @@ def get_atm_metric_moves(n: int) -> Dict[str, list[int]]:
     if not base_slice_perms_str:
         return {}
     total_stickers = 6 * n * n
-    axis_slice_perms = {"X": [], "Y": [], "Z": []}  # r0, r1, ...  # d0, d1, ...  # f0, f1, ...
+    axis_slice_perms = {
+        "X": [],  # r0, r1, ...
+        "Y": [],  # r0, r1, ...
+        "Z": [],  # r0, r1, ...
+    }  # type: dict[str, list[dict[str, list[int]]]]
     slice_names_x = sorted([k for k in base_slice_perms_str if k.startswith("r")], key=lambda x: int(x[1:]))
     slice_names_y = sorted([k for k in base_slice_perms_str if k.startswith("d")], key=lambda x: int(x[1:]))
     slice_names_z = sorted([k for k in base_slice_perms_str if k.startswith("f")], key=lambda x: int(x[1:]))
