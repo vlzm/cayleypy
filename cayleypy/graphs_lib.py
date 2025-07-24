@@ -386,9 +386,9 @@ def prepare_graph(name: str, n: int = 0) -> CayleyGraphDef:
     If you add a graph here, it must be one line calling a function defined elsewhere.
     """
     if name == "cube_2/2/2_6gensQTM":
-        return Puzzles.rubik_cube(2, "QTM")
+        return Puzzles.rubik_cube(2, "fixed_QTM")
     elif name == "cube_2/2/2_9gensHTM":
-        return Puzzles.rubik_cube(2, "HTM")
+        return Puzzles.rubik_cube(2, "fixed_HTM")
     elif name == "cube_3/3/3_12gensQTM":
         return Puzzles.rubik_cube(3, "QTM")
     elif name == "cube_3/3/3_18gensHTM":

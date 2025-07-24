@@ -195,15 +195,27 @@ def test_heisenberg_growth():
 
 def test_puzzles_growth():
     data = load_dataset("puzzles_growth")
-    _verify_layers_fast(Puzzles.rubik_cube(2, metric="HTM"), data["cube_222_htm"])
-    _verify_layers_fast(Puzzles.rubik_cube(2, metric="QTM"), data["cube_222_qtm"])
     _verify_layers_fast(Puzzles.rubik_cube(3, metric="HTM"), data["cube_333_htm"])
     _verify_layers_fast(Puzzles.rubik_cube(3, metric="QTM"), data["cube_333_qtm"])
-    _verify_layers_fast(Puzzles.rubik_cube(2, metric="QSTM"), data["cube_222_qstm"])
     _verify_layers_fast(Puzzles.mini_pyramorphix(), data["mini_pyramorphix"])
     _verify_layers_fast(Puzzles.pyraminx(), data["pyraminx"])
     _verify_layers_fast(Puzzles.starminx(), data["starminx"])
     _verify_layers_fast(Puzzles.starminx_2(), data["starminx_2"])
+
+
+def test_puzzles_growth_cube_2x2x2():
+    data = load_dataset("puzzles_growth")
+    _verify_layers_fast(Puzzles.rubik_cube(2, metric="fixed_HTM"), data["cube_222_fixed_htm"])
+    _verify_layers_fast(Puzzles.rubik_cube(2, metric="fixed_QTM"), data["cube_222_fixed_qtm"])
+    _verify_layers_fast(Puzzles.rubik_cube(2, metric="QSTM"), data["cube_222_qstm"])
+    _verify_layers_fast(Puzzles.rubik_cube(2, metric="HTM"), data["cube_222_htm"])
+    _verify_layers_fast(Puzzles.rubik_cube(2, metric="QTM"), data["cube_222_qtm"])
+    _verify_layers_fast(Puzzles.rubik_cube(2, metric="ATM"), data["cube_222_atm"])
+
+    for name in ["cube_222_fixed_htm", "cube_222_fixed_qtm"]:
+        assert sum(data[name]) == 3674160
+    for name in ["cube_222_qstm", "cube_222_htm", "cube_222_qtm", "cube_222_atm"]:
+        assert sum(data[name]) == 88179840
 
 
 def test_gap_puzzles_growth_cubes():

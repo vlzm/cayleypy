@@ -1,4 +1,11 @@
-from .cube import rubik_cube_qstm, rubik_cube_htm, rubik_cube_qtm
+from .cube import (
+    rubik_cube_qstm,
+    rubik_cube_htm,
+    rubik_cube_qtm,
+    rubik_cube_atm,
+    fixed_corner_cub_quarter,
+    fixed_corner_cub_half,
+)
 from .globe import globe_puzzle
 from .hungarian_rings import hungarian_rings_generators
 from .moves import MINI_PYRAMORPHIX_ALLOWED_MOVES, PYRAMINX_MOVES, MEGAMINX_MOVES
@@ -17,8 +24,11 @@ class Puzzles:
         :param cube_size: - Size of the cube (N).
         :param metric: - metric defining what counts as one move, one of:
           - "QSTM" - Quarter Slice Turn Metric.
-          - "QTM" - Quarter Turn Metric (only supported for 2x2x2 and 3x3x3).
-          - "HTM" - Half Turn Metric (only supported for 2x2x2 and 3x3x3).
+          - "QTM" - Quarter Turn Metric.
+          - "HTM" - Half Turn Metric.
+          - "ATM" - Axial Turn Metric.
+          - "fixed_QTM" - fixed left corner with quarter turn moves (support only 2x2x2).
+          - "fixed_HTM" - fixed left corner with half turn moves (support only 2x2x2).
         """
         if metric == "QSTM":
             return rubik_cube_qstm(cube_size)
@@ -26,6 +36,12 @@ class Puzzles:
             return rubik_cube_qtm(cube_size)
         elif metric == "HTM":
             return rubik_cube_htm(cube_size)
+        elif metric == "ATM":
+            return rubik_cube_atm(cube_size)
+        elif metric == "fixed_QTM":
+            return fixed_corner_cub_quarter()
+        elif metric == "fixed_HTM":
+            return fixed_corner_cub_half()
         else:
             raise ValueError(f"Unknown metric: {metric}")
 
