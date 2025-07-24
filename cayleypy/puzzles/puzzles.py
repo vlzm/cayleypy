@@ -1,4 +1,11 @@
-from .cube import rubik_cube_qstm, rubik_cube_htm, rubik_cube_qtm, rubik_cube_atm, fixed_corner_cub_quarter, fixed_corner_cub_half
+from .cube import (
+    rubik_cube_qstm,
+    rubik_cube_htm,
+    rubik_cube_qtm,
+    rubik_cube_atm,
+    fixed_corner_cub_quarter,
+    fixed_corner_cub_half,
+)
 from .globe import globe_puzzle
 from .hungarian_rings import hungarian_rings_generators
 from .moves import MINI_PYRAMORPHIX_ALLOWED_MOVES, PYRAMINX_MOVES, STARMINX_MOVES, MEGAMINX_MOVES
@@ -36,7 +43,6 @@ class Puzzles:
             return fixed_corner_cub_half()
         else:
             raise ValueError(f"Unknown metric: {metric}")
-    
 
     @staticmethod
     def globe_puzzle(a: int, b: int) -> CayleyGraphDef:

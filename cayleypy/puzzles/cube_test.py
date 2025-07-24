@@ -31,6 +31,7 @@ def test_cube_222_qtm():
     graph = Puzzles.rubik_cube(2, metric="QTM")
     assert graph.n_generators == 12
 
+
 def test_cube_222_htm():
     graph = Puzzles.rubik_cube(2, metric="HTM")
     assert graph.n_generators == 18
@@ -45,9 +46,11 @@ def test_cube_333_htm():
     graph = Puzzles.rubik_cube(3, metric="HTM")
     assert graph.n_generators == 18
 
+
 def test_cube_222_atm():
     graph = Puzzles.rubik_cube(2, metric="ATM")
     assert graph.n_generators == 24
+
 
 def test_cube_333_atm():
     graph = Puzzles.rubik_cube(3, metric="ATM")
