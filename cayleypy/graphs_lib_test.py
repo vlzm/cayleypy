@@ -7,10 +7,12 @@ def test_lrx():
     graph = PermutationGroups.lrx(4)
     assert np.array_equal(graph.generators, [[1, 2, 3, 0], [3, 0, 1, 2], [1, 0, 2, 3]])
     assert graph.generator_names == ["L", "R", "X"]
+    assert graph.name == "lrx-4"
 
     graph = PermutationGroups.lrx(5, k=3)
     assert np.array_equal(graph.generators, [[1, 2, 3, 4, 0], [4, 0, 1, 2, 3], [3, 1, 2, 0, 4]])
     assert graph.generator_names == ["L", "R", "X"]
+    assert graph.name == "lrx-5(k=3)"
 
 
 def test_top_spin():
@@ -230,3 +232,27 @@ def test_rapaport_m2():
     assert graph_n5.generators == [[1, 0, 2, 3, 4], [1, 0, 3, 2, 4], [0, 2, 1, 4, 3]]
     graph_n6 = PermutationGroups.rapaport_m2(6)
     assert graph_n6.generators == [[1, 0, 2, 3, 4, 5], [1, 0, 3, 2, 5, 4], [0, 2, 1, 4, 3, 5]]
+
+
+def test_all_cycles():
+    graph = PermutationGroups.all_cycles(3)
+    assert graph.n_generators == 5
+    expected = [
+        [1, 0, 2],  # (0 1)
+        [2, 1, 0],  # (0 2)
+        [0, 2, 1],  # (1 2)
+        [1, 2, 0],  # (0 1 2)
+        [2, 0, 1],  # (0 2 1)
+    ]
+    for gen in expected:
+        assert gen in graph.generators
+
+    # https://oeis.org/A006231
+    assert PermutationGroups.all_cycles(4).n_generators == 20
+    assert PermutationGroups.all_cycles(5).n_generators == 84
+    assert PermutationGroups.all_cycles(6).n_generators == 409
+
+
+def test_wrapped_k_cycles():
+    graph = PermutationGroups.wrapped_k_cycles(5, 3)
+    assert graph.generators == [[1, 2, 0, 3, 4], [0, 2, 3, 1, 4], [0, 1, 3, 4, 2], [3, 1, 2, 4, 0], [1, 4, 2, 3, 0]]

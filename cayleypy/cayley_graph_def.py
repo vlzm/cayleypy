@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import Enum
 from functools import cached_property
 from typing import Optional, Union, Any
@@ -100,12 +100,14 @@ class CayleyGraphDef:
     generators_matrices: list[MatrixGenerator]
     generator_names: list[str]
     central_state: list[int]
+    name: str
 
     @staticmethod
     def create(
         generators: Union[list[list[int]], torch.Tensor, np.ndarray],
         generator_names: Optional[list[str]] = None,
         central_state: Union[list[int], torch.Tensor, np.ndarray, str, None] = None,
+        name: str = "",
     ):
         """Creates Cayley Graph definition (when generators are permutations).
 
@@ -113,6 +115,7 @@ class CayleyGraphDef:
         :param generator_names: Names of the generators (optional).
         :param central_state: List of n numbers between 0 and n-1, the central state.
                  If None, defaults to the identity permutation of size n.
+        :param name: Name of this graph.
         """
         # Prepare generators.
         if isinstance(generators, list):
@@ -140,7 +143,7 @@ class CayleyGraphDef:
         else:
             central_state = CayleyGraphDef.normalize_central_state(central_state)
 
-        return CayleyGraphDef(GeneratorType.PERMUTATION, generators_list, [], generator_names, central_state)
+        return CayleyGraphDef(GeneratorType.PERMUTATION, generators_list, [], generator_names, central_state, name)
 
     @staticmethod
     def for_matrix_group(
@@ -148,12 +151,14 @@ class CayleyGraphDef:
         generators: list[MatrixGenerator],
         generator_names: Optional[list[str]] = None,
         central_state: Union[np.ndarray, list[list[int]], list[int], None] = None,
+        name: str = "",
     ):
         """Creates Cayley Graph definition (when generators are matrices).
 
         :param generators: List of generating n*n matrices.
         :param generator_names: Names of the generators (optional).
         :param central_state: the central state (n*m matrix). Defaults to the n*n identity matrix.
+        :param name: Name of this graph.
         """
         if generator_names is None:
             generator_names = ["g" + str(i) for i in range(len(generators))]
@@ -163,7 +168,7 @@ class CayleyGraphDef:
         central_state_list = CayleyGraphDef.normalize_central_state(central_state)
         n = generators[0].n
         assert len(central_state) % n == 0, "Wrong size of central state."
-        return CayleyGraphDef(GeneratorType.MATRIX, [], generators, generator_names, central_state_list)
+        return CayleyGraphDef(GeneratorType.MATRIX, [], generators, generator_names, central_state_list, name)
 
     def __post_init__(self):
         # Validation.
@@ -251,13 +256,10 @@ class CayleyGraphDef:
         return [int(x) for x in central_state]
 
     def with_central_state(self, central_state) -> "CayleyGraphDef":
-        return CayleyGraphDef(
-            self.generators_type,
-            self.generators_permutations,
-            self.generators_matrices,
-            self.generator_names,
-            CayleyGraphDef.normalize_central_state(central_state),
-        )
+        return replace(self, central_state=CayleyGraphDef.normalize_central_state(central_state))
+
+    def with_name(self, name: str) -> "CayleyGraphDef":
+        return replace(self, name=name)
 
     def is_permutation_group(self):
         """Whether generators in this graph are permutations."""
@@ -271,6 +273,8 @@ class CayleyGraphDef:
         """Returns the same graph where generators are replaced with inverses (in the same order).
 
         This is needed for restoring path in the Beam Search algorithm.
+        Note that even when generators are self-inverse, this will be a different graph because order of generators
+        changes. For example, LRX generators turn into RLX generators.
         """
         if self.generators_type == GeneratorType.PERMUTATION:
             return CayleyGraphDef.create(
@@ -283,6 +287,32 @@ class CayleyGraphDef:
                 generators=[m.inv for m in self.generators_matrices],
                 central_state=self.central_state,
             )
+
+    def make_inverse_closed(self) -> "CayleyGraphDef":
+        """Makes generators inverse-closed, adding extra generators when necessary.
+
+        If generators are already inverse-closed, returns self.
+        Otherwise, for each generator that does not have its inverse in the set of generators, adds an inverse generator
+        to the set.
+        """
+        if self.generators_inverse_closed:
+            return self
+        if self.generators_type == GeneratorType.PERMUTATION:
+            generators_set = {tuple(self.generators_permutations[i]) for i in range(self.n_generators)}
+            new_generators = []
+            new_generator_names = []  # type: list[str]
+            for i in range(self.n_generators):
+                inv_perm = inverse_permutation(self.generators_permutations[i])
+                if tuple(inv_perm) not in generators_set:
+                    new_generators.append(inv_perm)
+                    new_generator_names.append(self.generator_names[i] + "'")
+            return CayleyGraphDef.create(
+                generators=self.generators_permutations + new_generators,
+                generator_names=self.generator_names + new_generator_names,
+                central_state=self.central_state,
+            )
+        else:
+            assert False, "Not implemented."
 
     def path_to_string(self, path: list[int], delimiter=".") -> str:
         return delimiter.join(self.generator_names[i] for i in path)

@@ -5,6 +5,7 @@ import os
 
 import pytest
 
+from . import GapPuzzles
 from .cayley_graph import CayleyGraph
 from .cayley_graph_def import CayleyGraphDef
 from .datasets import load_dataset
@@ -36,7 +37,7 @@ def test_lrx_cayley_growth():
 
 def test_lx_cayley_growth():
     # See https://oeis.org/A039745
-    oeis_a039745 = [None, 0, 1, 2, 6, 11, 18, 25, 35, 45, 58, 71, 87, 103, 122]
+    oeis_a039745 = [None, 0, 1, 2, 6, 11, 18, 25, 35, 45, 58, 71, 87, 103, 122, 141]
     for key, layer_sizes in load_dataset("lx_cayley_growth").items():
         n = int(key)
         assert sum(layer_sizes) == math.factorial(n)
@@ -160,13 +161,29 @@ def test_rapaport_m2_cayley_growth():
         _verify_layers_fast(PermutationGroups.rapaport_m2(n), layer_sizes)
 
 
+def test_wrapped_k_cycles_cayley_growth():
+    for key, layer_sizes in load_dataset("wrapped_k_cycles_cayley_growth").items():
+        n, k = map(int, key.split(","))
+        _verify_layers_fast(PermutationGroups.wrapped_k_cycles(n, k), layer_sizes)
+
+
+def test_stars_cayley_growth():
+    for key, layer_sizes in load_dataset("stars_cayley_growth").items():
+        n = int(key)
+        assert sum(layer_sizes) == math.factorial(n)
+        _verify_layers_fast(PermutationGroups.stars(n), layer_sizes)
+
+
+@pytest.mark.skipif(not RUN_SLOW_TESTS, reason="slow test")
 def test_hungarian_rings_growth():
     for key, layer_sizes in load_dataset("hungarian_rings_growth").items():
-        n = int(key)
-        assert n % 2 == 0
-        ring_size = (n + 2) // 2
-        assert sum(layer_sizes) == math.factorial(n) // (2 if (ring_size % 2 > 0) else 1)
-        _verify_layers_fast(Puzzles.hungarian_rings(n), layer_sizes)
+        parameters = list(map(int, key.split(",")))
+        assert len(parameters) == 4
+        (left_size, left_index, right_size, right_index) = parameters
+        n = left_size + right_size - (2 if left_index > 0 and right_index > 0 else 1)
+        if n < 6 or n > 12:
+            continue
+        _verify_layers_fast(Puzzles.hungarian_rings(*parameters), layer_sizes)
 
 
 def test_heisenberg_growth():
@@ -186,9 +203,43 @@ def test_puzzles_growth():
     _verify_layers_fast(Puzzles.mini_pyramorphix(), data["mini_pyramorphix"])
     _verify_layers_fast(Puzzles.pyraminx(), data["pyraminx"])
     _verify_layers_fast(Puzzles.starminx(), data["starminx"])
+    _verify_layers_fast(Puzzles.starminx_2(), data["starminx_2"])
+
+
+def test_gap_puzzles_growth_cubes():
+    data = load_dataset("puzzles_growth")
+    _verify_layers_fast(GapPuzzles.puzzle("2x2x2"), data["cube_222_qstm"])
+    _verify_layers_fast(GapPuzzles.puzzle("3x3x3"), data["cube_333_qtm"])
+
+
+@pytest.mark.parametrize(
+    "puzzle_name",
+    [
+        "dino",
+        "master_pyramorphix",
+        "mastermorphix",
+        "pyraminx",
+        "pyramorphix",
+        "skewb_diamond",
+        "starminx",
+        "starminx_2",
+        "tetraminx",
+    ],
+)
+def test_gap_puzzles_growth(puzzle_name: str):
+    _verify_layers_fast(GapPuzzles.puzzle(puzzle_name), load_dataset("puzzles_growth")[puzzle_name])
 
 
 def test_globes_growth():
     for key, layer_sizes in load_dataset("globes_growth").items():
         a, b = map(int, key.split(","))
         _verify_layers_fast(Puzzles.globe_puzzle(a, b), layer_sizes)
+
+
+def test_all_cycles_cayley_growth():
+    for key, layer_sizes in load_dataset("all_cycles_cayley_growth").items():
+        n = int(key)
+        assert sum(layer_sizes) == math.factorial(n)
+        assert all(isinstance(x, int) and x >= 0 for x in layer_sizes)
+        if n <= 5:
+            _verify_layers_fast(PermutationGroups.all_cycles(n), layer_sizes)
