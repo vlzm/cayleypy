@@ -257,7 +257,7 @@ def test_cube222_qtm():
     result = graph.bfs()
     assert result.num_vertices == 3674160
     assert result.diameter() == 14
-    assert result.layer_sizes == load_dataset("puzzles_growth")["cube_222_qtm"]
+    assert result.layer_sizes == load_dataset("puzzles_growth")["cube_222_fixed_qtm"]
 
 
 @pytest.mark.skipif(not RUN_SLOW_TESTS, reason="slow test")
@@ -266,7 +266,7 @@ def test_cube222_htm():
     result = graph.bfs()
     assert result.num_vertices == 3674160
     assert result.diameter() == 11
-    assert result.layer_sizes == load_dataset("puzzles_growth")["cube_222_htm"]
+    assert result.layer_sizes == load_dataset("puzzles_growth")["cube_222_fixed_htm"]
 
 
 def test_all_transpositions_8():
