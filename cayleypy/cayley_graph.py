@@ -4,7 +4,6 @@ from typing import Optional, Union
 
 import numpy as np
 import torch
-from networkx.algorithms.traversal import bfs_layers
 
 from .beam_search_result import BeamSearchResult
 from .bfs_result import BfsResult
