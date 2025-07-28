@@ -468,8 +468,9 @@ class CayleyGraph:
             # Start state is the central state.
             return BeamSearchResult(True, 0, [], debug_scores, self.definition)
 
-        # TODO: this can be cached.
-        # WARNING: this should be for reversed graph in case of not inverse-closed.
+        # Meet-in-the-middle - pre-compute neighborhood of central state using BFS.
+        # Beam search will terminate when any of these states are encountered.
+        # If `mim_bfs_layers`, this is equivalent to regular beam search.
         bfs_result_for_mim = self.bfs(return_all_hashes=True, max_diameter=mim_bfs_layers)
         layers_for_mim = []
         i = 0
@@ -478,12 +479,11 @@ class CayleyGraph:
             i += layer_size
             layers_for_mim.append(cur_layer)
 
-        # Checks if any of `hashes` are in `bfs_for_mim`.
-        # Returns number of smallest layer where intersection was found, or -1 if not found.
+        # Checks if any of `hashes` are in neighborhood of the central state.
+        # Returns the number of the first layer where intersection was found, or -1 if not found.
         def _check_path_found(hashes):
             for j in range(0, mim_bfs_layers + 1):
-                mask = isin_via_searchsorted(layers_for_mim[j], hashes)
-                if torch.any(mask):
+                if torch.any(isin_via_searchsorted(layers_for_mim[j], hashes)):
                     return j
             return -1
 
