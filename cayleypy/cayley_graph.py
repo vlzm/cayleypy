@@ -455,6 +455,9 @@ class CayleyGraph:
         :param beam_width: Width of the beam (how many "best" states we consider at each step".
         :param max_iterations: Maximum number of iterations before giving up.
         :param return_path: Whether to return parth (consumes much more memory if True).
+        :param mim_bfs_layers: Number of layers around central state to compute for meet-in-the-middle. Beam search will
+            terminate when any of states on those layers is encountered. Defaults to 0, which means beam seacrh will
+            terminate when central state is encountered.
         :return: BeamSearchResult containing found path length and (optionally) the path itself.
         """
         if predictor is None:
@@ -469,9 +472,10 @@ class CayleyGraph:
             return BeamSearchResult(True, 0, [], debug_scores, self.definition)
 
         # Meet-in-the-middle - pre-compute neighborhood of central state using BFS.
-        # Beam search will terminate when any of these states are encountered.
+        # Beam search will terminate when any of these states is encountered.
         # If `mim_bfs_layers`, this is equivalent to regular beam search.
         bfs_result_for_mim = self.bfs(return_all_hashes=True, max_diameter=mim_bfs_layers)
+        assert bfs_result_for_mim.vertices_hashes is not None
         layers_for_mim = []
         i = 0
         for layer_size in bfs_result_for_mim.layer_sizes:
@@ -504,6 +508,7 @@ class CayleyGraph:
                         middle_state = self.decode_states(layer2[mask.nonzero()[0].item()].reshape((1, -1)))
                         path1 = self._restore_path(all_layers_hashes, middle_state)
                         path2 = self.find_path_from(middle_state, bfs_result_for_mim)
+                        assert path2 is not None
                         path = path1 + path2
                 return BeamSearchResult(True, i + bfs_layer_id + 1, path, debug_scores, self.definition)
 
