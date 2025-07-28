@@ -445,6 +445,7 @@ class CayleyGraph:
         beam_width=1000,
         max_iterations=1000,
         return_path=False,
+        mim_bfs_layers: int = 0,
     ) -> BeamSearchResult:
         """Tries to find a path from `start_state` to central state using Beam Search algorithm.
 
@@ -467,16 +468,44 @@ class CayleyGraph:
             # Start state is the central state.
             return BeamSearchResult(True, 0, [], debug_scores, self.definition)
 
+        # TODO: this can be cached.
+        # WARNING: this should be for reversed graph in case of not inverse-closed.
+        bfs_result_for_mim = self.bfs(return_all_hashes=True, max_diameter=mim_bfs_layers)
+        layers_for_mim = []
+        i = 0
+        for layer_size in bfs_result_for_mim.layer_sizes:
+            cur_layer = bfs_result_for_mim.vertices_hashes[i : i + layer_size]
+            i += layer_size
+            layers_for_mim.append(cur_layer)
+
+        # Checks if any of `hashes` are in `bfs_for_mim`.
+        # Returns number of smallest layer where intersection was found, or -1 if not found.
+        def _check_path_found(hashes):
+            for j in range(0, mim_bfs_layers + 1):
+                mask = isin_via_searchsorted(layers_for_mim[j], hashes)
+                if torch.any(mask):
+                    return j
+            return -1
+
         for i in range(max_iterations):
             # Create states on the next layer.
             layer2, layer2_hashes = self._get_unique_states(self.get_neighbors(layer1))
 
-            if bool(isin_via_searchsorted(self.central_state_hash, layer2_hashes)):
+            bfs_layer_id = _check_path_found(layer2_hashes)
+            if bfs_layer_id != -1:
                 # Path found.
                 path = None
                 if return_path:
-                    path = self._restore_path(all_layers_hashes, self.central_state)
-                return BeamSearchResult(True, i + 1, path, debug_scores, self.definition)
+                    if bfs_layer_id == 0:
+                        path = self._restore_path(all_layers_hashes, self.central_state)
+                    else:
+                        mask = isin_via_searchsorted(layer2_hashes, layers_for_mim[bfs_layer_id])
+                        assert torch.any(mask), "No intersection in Meet-in-the-middle"
+                        middle_state = self.decode_states(layer2[mask.nonzero()[0].item()].reshape((1, -1)))
+                        path1 = self._restore_path(all_layers_hashes, middle_state)
+                        path2 = self.find_path_from(middle_state, bfs_result_for_mim)
+                        path = path1 + path2
+                return BeamSearchResult(True, i + bfs_layer_id + 1, path, debug_scores, self.definition)
 
             # Pick `beam_width` states with lowest scores.
             if len(layer2) >= beam_width:
