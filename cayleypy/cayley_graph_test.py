@@ -5,12 +5,12 @@ import pytest
 import torch
 
 from .beam_search_result import BeamSearchResult
-from .predictor import Predictor
 from .bfs_numpy import bfs_numpy
 from .cayley_graph import CayleyGraph
 from .cayley_graph_def import MatrixGenerator, CayleyGraphDef
 from .datasets import load_dataset
 from .graphs_lib import PermutationGroups, MatrixGroups, prepare_graph
+from .predictor import Predictor
 
 RUN_SLOW_TESTS = os.getenv("RUN_SLOW_TESTS") == "1"
 BENCHMARK_RUN = os.getenv("BENCHMARK") == "1"
@@ -458,6 +458,16 @@ def test_beam_search_lrx_16():
     state = _scramble(graph, 120)
     result = graph.beam_search(start_state=state, predictor=predictor)
     assert result.path_found
+
+
+def test_beam_search_lrx_16_meet_in_the_middle():
+    graph = CayleyGraph(PermutationGroups.lrx(16))
+    predictor = Predictor.pretrained(graph)
+    bfs_result = graph.bfs(max_diameter=10, return_all_hashes=True)
+    state = _scramble(graph, 120)
+    result = graph.beam_search(start_state=state, predictor=predictor, bfs_result_for_mitm=bfs_result, return_path=True)
+    assert result.path_found
+    _validate_beam_search_result(graph, state, result)
 
 
 @pytest.mark.skipif(not RUN_SLOW_TESTS, reason="slow test")

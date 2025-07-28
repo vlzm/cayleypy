@@ -445,6 +445,7 @@ class CayleyGraph:
         beam_width=1000,
         max_iterations=1000,
         return_path=False,
+        bfs_result_for_mitm: Optional[BfsResult] = None,
     ) -> BeamSearchResult:
         """Tries to find a path from `start_state` to central state using Beam Search algorithm.
 
@@ -454,6 +455,10 @@ class CayleyGraph:
         :param beam_width: Width of the beam (how many "best" states we consider at each step".
         :param max_iterations: Maximum number of iterations before giving up.
         :param return_path: Whether to return parth (consumes much more memory if True).
+        :param bfs_result_for_mitm: BfsResult with pre-computed neighborhood of central state to compute for
+            meet-in-the-middle modification of Beam Search. Beam search will terminate when any of states in that
+            neighborhood is encountered. Defaults to None, which means no meet-in-the-middle (i.e. only search for the
+            central state).
         :return: BeamSearchResult containing found path length and (optionally) the path itself.
         """
         if predictor is None:
@@ -467,16 +472,42 @@ class CayleyGraph:
             # Start state is the central state.
             return BeamSearchResult(True, 0, [], debug_scores, self.definition)
 
+        bfs_layers_hashes = [self.central_state_hash]
+        if bfs_result_for_mitm is not None:
+            assert bfs_result_for_mitm.graph == self.definition
+            bfs_layers_hashes = bfs_result_for_mitm.layers_hashes
+
+        # Checks if any of `hashes` are in neighborhood of the central state.
+        # Returns the number of the first layer where intersection was found, or -1 if not found.
+        def _check_path_found(hashes):
+            for j, layer in enumerate(bfs_layers_hashes):
+                if torch.any(isin_via_searchsorted(layer, hashes)):
+                    return j
+            return -1
+
+        def _restore_path(found_layer_id: int) -> Optional[list[int]]:
+            if not return_path:
+                return None
+            if found_layer_id == 0:
+                return self._restore_path(all_layers_hashes, self.central_state)
+            assert bfs_result_for_mitm is not None
+            mask = isin_via_searchsorted(layer2_hashes, bfs_layers_hashes[found_layer_id])
+            assert torch.any(mask), "No intersection in Meet-in-the-middle"
+            middle_state = self.decode_states(layer2[mask.nonzero()[0].item()].reshape((1, -1)))
+            path1 = self._restore_path(all_layers_hashes, middle_state)
+            path2 = self.find_path_from(middle_state, bfs_result_for_mitm)
+            assert path2 is not None
+            return path1 + path2
+
         for i in range(max_iterations):
             # Create states on the next layer.
             layer2, layer2_hashes = self._get_unique_states(self.get_neighbors(layer1))
 
-            if bool(isin_via_searchsorted(self.central_state_hash, layer2_hashes)):
+            bfs_layer_id = _check_path_found(layer2_hashes)
+            if bfs_layer_id != -1:
                 # Path found.
-                path = None
-                if return_path:
-                    path = self._restore_path(all_layers_hashes, self.central_state)
-                return BeamSearchResult(True, i + 1, path, debug_scores, self.definition)
+                path = _restore_path(bfs_layer_id)
+                return BeamSearchResult(True, i + bfs_layer_id + 1, path, debug_scores, self.definition)
 
             # Pick `beam_width` states with lowest scores.
             if len(layer2) >= beam_width:
@@ -535,16 +566,12 @@ class CayleyGraph:
         :param bfs_result: Pre-computed BFS result (call `bfs(return_all_hashes=True)` to get this).
         :return: The found path (list of generator ids), or None if `end_state` is not reachable from `start_state`.
         """
+        assert bfs_result.graph == self.definition
         end_state_hash = self.hasher.make_hashes(self.encode_states(end_state))
-        assert bfs_result.vertices_hashes is not None, "Run bfs with return_all_hashes=True."
-        i = 0
-        layers_hashes = []  # type: list[torch.Tensor]
-        for layer_size in bfs_result.layer_sizes:
-            cur_layer = bfs_result.vertices_hashes[i : i + layer_size]
-            i += layer_size
-            if bool(isin_via_searchsorted(end_state_hash, cur_layer)):
-                return self._restore_path(layers_hashes, end_state)
-            layers_hashes.append(cur_layer)
+        layers_hashes = bfs_result.layers_hashes
+        for i, bfs_layer in enumerate(layers_hashes):
+            if bool(isin_via_searchsorted(end_state_hash, bfs_layer)):
+                return self._restore_path(layers_hashes[:i], end_state)
         return None
 
     def find_path_from(
