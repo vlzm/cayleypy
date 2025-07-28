@@ -460,6 +460,15 @@ def test_beam_search_lrx_16():
     assert result.path_found
 
 
+def test_beam_search_lrx_16_meet_in_the_middle():
+    graph = CayleyGraph(PermutationGroups.lrx(16))
+    predictor = Predictor.pretrained(graph)
+    bfs_result = graph.bfs(max_diameter=10, return_all_hashes=True)
+    state = _scramble(graph, 120)
+    result = graph.beam_search(start_state=state, predictor=predictor, bfs_result_for_mitm=bfs_result, return_path=True)
+    assert result.path_found
+
+
 @pytest.mark.skipif(not RUN_SLOW_TESTS, reason="slow test")
 def test_beam_search_lrx_32():
     graph = CayleyGraph(PermutationGroups.lrx(32))
@@ -467,6 +476,7 @@ def test_beam_search_lrx_32():
     state = _scramble(graph, 496)
     result = graph.beam_search(start_state=state, predictor=predictor)
     assert result.path_found
+    _validate_beam_search_result(graph, state, result)
 
 
 @pytest.mark.skipif(not RUN_SLOW_TESTS, reason="slow test")

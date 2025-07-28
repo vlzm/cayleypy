@@ -269,3 +269,14 @@ class BfsResult:
 
     def __repr__(self):
         return f"BfsResult(diameter={self.diameter()}, layer_sizes={self.layer_sizes})"
+
+    @cached_property
+    def layers_hashes(self) -> list[torch.Tensor]:
+        """Returns sorted hashes of each layer (without making copies)."""
+        assert self.vertices_hashes is not None, "Run bfs with return_all_hashes=True."
+        hashes = []
+        i = 0
+        for layer_size in self.layer_sizes:
+            hashes.append(self.vertices_hashes[i : i + layer_size])
+            i += layer_size
+        return hashes
