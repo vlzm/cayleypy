@@ -4,8 +4,20 @@ from typing import Callable
 import numpy as np
 import torch
 
-# We are using int64, but avoid using the sign bit.
-CODEWORD_LENGTH = 63
+# We are using int64, but treating it as unsigned.
+# We cannot use uint64 because torch doesn't support bitwise shift for it.
+CODEWORD_LENGTH = 64
+
+
+# Returns 64-bit number with bit in position `bit_id` equal to 1 and all other bits equal to 0.
+def _one_shifted(bit_id) -> int:
+    return -0x8000000000000000 if bit_id == 63 else (1 << bit_id)
+
+
+# Returns 64-bit number with `n` highest bits set to 0, and all other bits set to 1.
+# This must be applied after shift right by n in case the sign bit might have been set.
+def _mask_with_high_zeros(n):
+    return (1 << (64 - n)) - 1
 
 
 class StringEncoder:
@@ -27,6 +39,7 @@ class StringEncoder:
         assert 1 <= code_width <= CODEWORD_LENGTH
         self.w = code_width
         self.n = n
+        self.uses_sign_bit = (self.w * self.n) >= 64
         self.encoded_length = int(math.ceil(self.n * self.w / CODEWORD_LENGTH))  # Encoded length.
 
     def encode(self, s: torch.Tensor) -> torch.Tensor:
@@ -70,7 +83,7 @@ class StringEncoder:
                 key = (start_cw_id, end_cw_id, shift)
                 if key not in shift_to_mask:
                     shift_to_mask[key] = 0
-                shift_to_mask[key] |= 1 << (start_bit % CODEWORD_LENGTH)
+                shift_to_mask[key] |= _one_shifted(start_bit % CODEWORD_LENGTH)
         return shift_to_mask
 
     def implement_permutation(self, p: list[int]) -> Callable[[torch.Tensor, torch.Tensor], None]:
@@ -86,6 +99,8 @@ class StringEncoder:
                 line += f"<<{shift}"
             elif shift < 0:
                 line += f">>{-shift}"
+                if self.uses_sign_bit:
+                    line += f"&{_mask_with_high_zeros(-shift)}"
             lines.append(line)
         src = "\n".join(lines)
         l: dict = {}
@@ -107,6 +122,8 @@ class StringEncoder:
                 term += f"<<{shift}"
             elif shift < 0:
                 term += f">>{-shift}"
+                if self.uses_sign_bit:
+                    term += f"&{_mask_with_high_zeros(-shift)}"
             terms.append(f"({term})")
         src = "f_ = lambda x: " + " | ".join(terms)
         l: dict = {}
