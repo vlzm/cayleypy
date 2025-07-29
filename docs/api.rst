@@ -41,5 +41,6 @@ Special BFS algorithms
 .. autosummary::
     :toctree: generated/
 
+    cayleypy.algo.find_path_bfs_mitm
     cayleypy.bfs_bitmask
     cayleypy.bfs_numpy

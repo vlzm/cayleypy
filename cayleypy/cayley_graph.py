@@ -229,7 +229,9 @@ class CayleyGraph:
         :param disable_batching: Disable batching. Use if you need states and hashes to be in the same order.
         :return: BfsResult object with requested BFS results.
         """
-        start_states = self.encode_states(start_states or self.central_state)
+        if start_states is None:
+            start_states = self.central_state
+        start_states = self.encode_states(start_states)
         layer1, layer1_hashes = self._get_unique_states(start_states)
         layer_sizes = [len(layer1)]
         layers = {0: self.decode_states(layer1)}
@@ -497,12 +499,12 @@ class CayleyGraph:
             if not return_path:
                 return None
             if found_layer_id == 0:
-                return self._restore_path(all_layers_hashes, self.central_state)
+                return self.restore_path(all_layers_hashes, self.central_state)
             assert bfs_result_for_mitm is not None
             mask = isin_via_searchsorted(layer2_hashes, bfs_layers_hashes[found_layer_id])
             assert torch.any(mask), "No intersection in Meet-in-the-middle"
             middle_state = self.decode_states(layer2[mask.nonzero()[0].item()].reshape((1, -1)))
-            path1 = self._restore_path(all_layers_hashes, middle_state)
+            path1 = self.restore_path(all_layers_hashes, middle_state)
             path2 = self.find_path_from(middle_state, bfs_result_for_mitm)
             assert path2 is not None
             return path1 + path2
@@ -536,7 +538,7 @@ class CayleyGraph:
         # Path not found.
         return BeamSearchResult(False, 0, None, debug_scores, self.definition)
 
-    def _restore_path(self, hashes: list[torch.Tensor], to_state: Union[torch.Tensor, np.ndarray, list]) -> list[int]:
+    def restore_path(self, hashes: list[torch.Tensor], to_state: Union[torch.Tensor, np.ndarray, list]) -> list[int]:
         """Restores path from layers hashes.
 
         Layers must be such that there is edge from state on previous layer to state on next layer.
@@ -579,7 +581,7 @@ class CayleyGraph:
         layers_hashes = bfs_result.layers_hashes
         for i, bfs_layer in enumerate(layers_hashes):
             if bool(isin_via_searchsorted(end_state_hash, bfs_layer)):
-                return self._restore_path(layers_hashes[:i], end_state)
+                return self.restore_path(layers_hashes[:i], end_state)
         return None
 
     def find_path_from(
