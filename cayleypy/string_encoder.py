@@ -10,13 +10,13 @@ CODEWORD_LENGTH = 64
 
 
 # Returns 64-bit number with bit in position `bit_id` equal to 1 and all other bits equal to 0.
-def _one_shifted(bit_id) -> int:
+def _one_shifted(bit_id: int) -> int:
     return -0x8000000000000000 if bit_id == 63 else (1 << bit_id)
 
 
 # Returns 64-bit number with `n` highest bits set to 0, and all other bits set to 1.
 # This must be applied after shift right by n in case the sign bit might have been set.
-def _mask_with_high_zeros(n):
+def _mask_with_high_zeros(n: int) -> int:
     return (1 << (64 - n)) - 1
 
 
