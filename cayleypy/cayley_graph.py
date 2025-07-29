@@ -1,6 +1,6 @@
 import gc
 import math
-from typing import Optional, Union
+from typing import Callable, Optional, Union
 
 import numpy as np
 import torch
@@ -198,6 +198,7 @@ class CayleyGraph:
         max_diameter: int = 1000000,
         return_all_edges: bool = False,
         return_all_hashes: bool = False,
+        stop_condition: Optional[Callable[[torch.Tensor, torch.Tensor], bool]] = None,
     ) -> BfsResult:
         """Runs bread-first search (BFS) algorithm from given `start_states`.
 
@@ -220,7 +221,10 @@ class CayleyGraph:
         :param max_diameter: maximal number of BFS iterations.
         :param return_all_edges: whether to return list of all edges (uses more memory).
         :param return_all_hashes: whether to return hashes for all vertices (uses more memory).
-
+        :param stop_condition: function to be called after each iteration. It takes hashes of latest computed layer and
+            returns whether BFS must immediately terminate. If it returns True, the layer that was passed to the
+            function will be the last returned layer in the result. This function can also be used as a "hook" to do
+            some computations after BFS iteration (in which case it must always return False).
         :return: BfsResult object with requested BFS results.
         """
         start_states = self.encode_states(start_states or self.central_state)
@@ -304,6 +308,8 @@ class CayleyGraph:
                 # Only keep hashes for last 2 layers.
                 seen_states_hashes = seen_states_hashes[-2:]
             if len(layer2) >= max_layer_size_to_explore:
+                break
+            if stop_condition is not None and stop_condition(layer2_hashes):
                 break
 
         if return_all_hashes and not full_graph_explored:
