@@ -4,8 +4,8 @@ from cayleypy import PermutationGroups, CayleyGraph
 from cayleypy.algo import find_path_bfs_mitm
 
 
-def _validate_path(graph: CayleyGraph, start_state: torch.Tensor, path: list[int]):
-    path_result = graph.apply_path(torch.Tensor(start_state), path).reshape((-1))
+def _validate_path(graph: CayleyGraph, start_state: list[int], path: list[int]):
+    path_result = graph.apply_path(torch.tensor(start_state, dtype=torch.int64), path).reshape((-1))
     assert torch.equal(path_result, graph.central_state)
 
 
@@ -13,7 +13,7 @@ def test_find_path_bfs_mitm_lrx10():
     graph = CayleyGraph(PermutationGroups.lrx(10))
     br12 = graph.bfs(max_diameter=12, return_all_hashes=True)
     br13 = graph.bfs(max_diameter=13, return_all_hashes=True)
-    start_state = torch.tensor([7, 9, 6, 1, 0, 8, 5, 3, 2, 4], dtype=torch.int64)
+    start_state = [7, 9, 6, 1, 0, 8, 5, 3, 2, 4]
 
     # Too few layers, path not found.
     result12 = find_path_bfs_mitm(graph, start_state, br12)
