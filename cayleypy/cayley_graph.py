@@ -1,6 +1,6 @@
 import gc
 import math
-from typing import Optional, Union
+from typing import Callable, Optional, Union
 
 import numpy as np
 import torch
@@ -198,6 +198,8 @@ class CayleyGraph:
         max_diameter: int = 1000000,
         return_all_edges: bool = False,
         return_all_hashes: bool = False,
+        stop_condition: Optional[Callable[[torch.Tensor, torch.Tensor], bool]] = None,
+        disable_batching: bool = False,
     ) -> BfsResult:
         """Runs bread-first search (BFS) algorithm from given `start_states`.
 
@@ -220,10 +222,16 @@ class CayleyGraph:
         :param max_diameter: maximal number of BFS iterations.
         :param return_all_edges: whether to return list of all edges (uses more memory).
         :param return_all_hashes: whether to return hashes for all vertices (uses more memory).
-
+        :param stop_condition: function to be called after each iteration. It takes 2 tensors: latest computed layer and
+            its hashes, and returns whether BFS must immediately terminate. If it returns True, the layer that was
+            passed to the function will be the last returned layer in the result. This function can also be used as a
+            "hook" to do some computations after BFS iteration (in which case it must always return False).
+        :param disable_batching: Disable batching. Use if you need states and hashes to be in the same order.
         :return: BfsResult object with requested BFS results.
         """
-        start_states = self.encode_states(start_states or self.central_state)
+        if start_states is None:
+            start_states = self.central_state
+        start_states = self.encode_states(start_states)
         layer1, layer1_hashes = self._get_unique_states(start_states)
         layer_sizes = [len(layer1)]
         layers = {0: self.decode_states(layer1)}
@@ -235,7 +243,7 @@ class CayleyGraph:
 
         # When we don't need edges, we can apply more memory-efficient algorithm with batching.
         # This algorithm finds neighbors in batches and removes duplicates from batches before stacking them.
-        do_batching = not return_all_edges
+        do_batching = not return_all_edges and not disable_batching
 
         # Stores hashes of previous layers, so BFS does not visit already visited states again.
         # If generators are inverse closed, only 2 last layers are stored here.
@@ -305,6 +313,8 @@ class CayleyGraph:
                 seen_states_hashes = seen_states_hashes[-2:]
             if len(layer2) >= max_layer_size_to_explore:
                 break
+            if stop_condition is not None and stop_condition(layer2, layer2_hashes):
+                break
 
         if return_all_hashes and not full_graph_explored:
             all_layers_hashes.append(layer1_hashes)
@@ -321,9 +331,6 @@ class CayleyGraph:
                 edges_list_starts.append(v2)
                 edges_list_ends.append(v1)
             edges_list_hashes = torch.vstack([torch.hstack(edges_list_starts), torch.hstack(edges_list_ends)]).T
-        vertices_hashes: Optional[torch.Tensor] = None
-        if return_all_hashes:
-            vertices_hashes = torch.hstack(all_layers_hashes)
 
         # Always store the last layer.
         last_layer_id = len(layer_sizes) - 1
@@ -334,7 +341,7 @@ class CayleyGraph:
             layer_sizes=layer_sizes,
             layers=layers,
             bfs_completed=full_graph_explored,
-            vertices_hashes=vertices_hashes,
+            layers_hashes=all_layers_hashes,
             edges_list_hashes=edges_list_hashes,
             graph=self.definition,
         )
@@ -489,12 +496,12 @@ class CayleyGraph:
             if not return_path:
                 return None
             if found_layer_id == 0:
-                return self._restore_path(all_layers_hashes, self.central_state)
+                return self.restore_path(all_layers_hashes, self.central_state)
             assert bfs_result_for_mitm is not None
             mask = isin_via_searchsorted(layer2_hashes, bfs_layers_hashes[found_layer_id])
             assert torch.any(mask), "No intersection in Meet-in-the-middle"
             middle_state = self.decode_states(layer2[mask.nonzero()[0].item()].reshape((1, -1)))
-            path1 = self._restore_path(all_layers_hashes, middle_state)
+            path1 = self.restore_path(all_layers_hashes, middle_state)
             path2 = self.find_path_from(middle_state, bfs_result_for_mitm)
             assert path2 is not None
             return path1 + path2
@@ -528,7 +535,7 @@ class CayleyGraph:
         # Path not found.
         return BeamSearchResult(False, 0, None, debug_scores, self.definition)
 
-    def _restore_path(self, hashes: list[torch.Tensor], to_state: Union[torch.Tensor, np.ndarray, list]) -> list[int]:
+    def restore_path(self, hashes: list[torch.Tensor], to_state: Union[torch.Tensor, np.ndarray, list]) -> list[int]:
         """Restores path from layers hashes.
 
         Layers must be such that there is edge from state on previous layer to state on next layer.
@@ -568,10 +575,11 @@ class CayleyGraph:
         """
         assert bfs_result.graph == self.definition
         end_state_hash = self.hasher.make_hashes(self.encode_states(end_state))
+        bfs_result.check_has_layer_hashes()
         layers_hashes = bfs_result.layers_hashes
         for i, bfs_layer in enumerate(layers_hashes):
             if bool(isin_via_searchsorted(end_state_hash, bfs_layer)):
-                return self._restore_path(layers_hashes[:i], end_state)
+                return self.restore_path(layers_hashes[:i], end_state)
         return None
 
     def find_path_from(

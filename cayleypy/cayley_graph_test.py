@@ -293,7 +293,6 @@ def test_hashes_list_len():
     graph = CayleyGraph(PermutationGroups.lrx(10).with_central_state("0110110110"))
     result = graph.bfs(return_all_edges=True, return_all_hashes=True)
     assert result.bfs_completed
-    assert result.num_vertices == len(result.vertices_hashes)
     assert result.num_vertices == len(result.vertex_names)
 
 
@@ -301,7 +300,6 @@ def test_hashes_list_len_max_radius():
     graph = CayleyGraph(PermutationGroups.lrx(10).with_central_state("0110110110"))
     result = graph.bfs(return_all_edges=True, return_all_hashes=True, max_diameter=2)
     assert not result.bfs_completed
-    assert result.num_vertices == len(result.vertices_hashes)
     assert result.num_vertices == len(result.vertex_names)
 
 
@@ -309,7 +307,6 @@ def test_hashes_list_len_max_layer_size_to_explore():
     graph = CayleyGraph(PermutationGroups.lrx(10).with_central_state("0110110110"))
     result = graph.bfs(return_all_edges=True, return_all_hashes=True, max_layer_size_to_explore=2)
     assert not result.bfs_completed
-    assert result.num_vertices == len(result.vertices_hashes)
     assert result.num_vertices == len(result.vertex_names)
 
 
