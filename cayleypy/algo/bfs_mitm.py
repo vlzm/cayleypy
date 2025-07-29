@@ -39,6 +39,7 @@ def find_path_bfs_mitm(
     if path is not None:
         return path
 
+    bfs_result.check_has_layer_hashes()
     bfs_last_layer = bfs_result.layers_hashes[-1]
     middle_states = []
 

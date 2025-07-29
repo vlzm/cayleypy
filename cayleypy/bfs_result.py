@@ -148,7 +148,7 @@ class BfsResult:
     def hashes_to_indices_dict(self) -> dict[int, int]:
         """Dictionary used to remap vertex hashes to indexes."""
         n = self.num_vertices
-        assert len(self.layers_hashes) == len(self.layers), "Run bfs with return_all_hashes=True."
+        self.check_has_layer_hashes()
         ans: dict[int, int] = {}
 
         ctr = 0
@@ -249,3 +249,6 @@ class BfsResult:
 
     def __repr__(self):
         return f"BfsResult(diameter={self.diameter()}, layer_sizes={self.layer_sizes})"
+
+    def check_has_layer_hashes(self):
+        assert len(self.layers_hashes) == len(self.layer_sizes), "Run bfs with return_all_hashes=True."

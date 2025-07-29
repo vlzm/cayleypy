@@ -575,6 +575,7 @@ class CayleyGraph:
         """
         assert bfs_result.graph == self.definition
         end_state_hash = self.hasher.make_hashes(self.encode_states(end_state))
+        bfs_result.check_has_layer_hashes()
         layers_hashes = bfs_result.layers_hashes
         for i, bfs_layer in enumerate(layers_hashes):
             if bool(isin_via_searchsorted(end_state_hash, bfs_layer)):
