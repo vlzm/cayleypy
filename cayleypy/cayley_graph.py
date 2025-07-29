@@ -199,6 +199,7 @@ class CayleyGraph:
         return_all_edges: bool = False,
         return_all_hashes: bool = False,
         stop_condition: Optional[Callable[[torch.Tensor, torch.Tensor], bool]] = None,
+        disable_batching: bool = False,
     ) -> BfsResult:
         """Runs bread-first search (BFS) algorithm from given `start_states`.
 
@@ -225,6 +226,7 @@ class CayleyGraph:
             its hashes, and returns whether BFS must immediately terminate. If it returns True, the layer that was
             passed to the function will be the last returned layer in the result. This function can also be used as a
             "hook" to do some computations after BFS iteration (in which case it must always return False).
+        :param disable_batching: Disable batching. Use if you need states and hashes to be in the same order.
         :return: BfsResult object with requested BFS results.
         """
         start_states = self.encode_states(start_states or self.central_state)
@@ -239,7 +241,7 @@ class CayleyGraph:
 
         # When we don't need edges, we can apply more memory-efficient algorithm with batching.
         # This algorithm finds neighbors in batches and removes duplicates from batches before stacking them.
-        do_batching = not return_all_edges
+        do_batching = not return_all_edges and not disable_batching
 
         # Stores hashes of previous layers, so BFS does not visit already visited states again.
         # If generators are inverse closed, only 2 last layers are stored here.
