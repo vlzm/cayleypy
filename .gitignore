@@ -7,6 +7,8 @@ __pycache__/
 build/
 htmlcov/
 .venv/
+*.pth
+*.csv
 
 # Sphinx
 docs/_build
