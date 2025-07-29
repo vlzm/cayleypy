@@ -64,7 +64,7 @@ def find_path_bfs_mitm(
     for middle_state in middle_states:
         try:
             path2 = graph.restore_path(bfs_result.layers_hashes[:-1], middle_state)
-        except Exception as ex:
+        except AssertionError as ex:
             print("Warning! State did not work due to hash collision!", ex)
             continue
         path1 = graph.restore_path(bfs_result_2.layers_hashes[:-1], middle_state)
