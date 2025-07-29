@@ -221,10 +221,10 @@ class CayleyGraph:
         :param max_diameter: maximal number of BFS iterations.
         :param return_all_edges: whether to return list of all edges (uses more memory).
         :param return_all_hashes: whether to return hashes for all vertices (uses more memory).
-        :param stop_condition: function to be called after each iteration. It takes hashes of latest computed layer and
-            returns whether BFS must immediately terminate. If it returns True, the layer that was passed to the
-            function will be the last returned layer in the result. This function can also be used as a "hook" to do
-            some computations after BFS iteration (in which case it must always return False).
+        :param stop_condition: function to be called after each iteration. It takes 2 tensors: latest computed layer and
+            its hashes, and returns whether BFS must immediately terminate. If it returns True, the layer that was
+            passed to the function will be the last returned layer in the result. This function can also be used as a
+            "hook" to do some computations after BFS iteration (in which case it must always return False).
         :return: BfsResult object with requested BFS results.
         """
         start_states = self.encode_states(start_states or self.central_state)
@@ -309,7 +309,7 @@ class CayleyGraph:
                 seen_states_hashes = seen_states_hashes[-2:]
             if len(layer2) >= max_layer_size_to_explore:
                 break
-            if stop_condition is not None and stop_condition(layer2_hashes):
+            if stop_condition is not None and stop_condition(layer2, layer2_hashes):
                 break
 
         if return_all_hashes and not full_graph_explored:
