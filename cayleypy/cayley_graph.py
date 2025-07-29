@@ -331,9 +331,6 @@ class CayleyGraph:
                 edges_list_starts.append(v2)
                 edges_list_ends.append(v1)
             edges_list_hashes = torch.vstack([torch.hstack(edges_list_starts), torch.hstack(edges_list_ends)]).T
-        vertices_hashes: Optional[torch.Tensor] = None
-        if return_all_hashes:
-            vertices_hashes = torch.hstack(all_layers_hashes)
 
         # Always store the last layer.
         last_layer_id = len(layer_sizes) - 1
@@ -344,7 +341,7 @@ class CayleyGraph:
             layer_sizes=layer_sizes,
             layers=layers,
             bfs_completed=full_graph_explored,
-            vertices_hashes=vertices_hashes,
+            layers_hashes=all_layers_hashes,
             edges_list_hashes=edges_list_hashes,
             graph=self.definition,
         )

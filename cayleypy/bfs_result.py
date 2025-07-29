@@ -21,9 +21,9 @@ class BfsResult:
     layer_sizes: list[int]  # i-th element is number of states at distance i from start.
     layers: dict[int, torch.Tensor]  # Explicitly stored states for each layer.
 
-    # Hashes of all vertices (if requested).
+    # Hashes of all vertices (if requested). Empty if not requested
     # Order is the same as order of states in layers.
-    vertices_hashes: Optional[torch.Tensor]
+    layers_hashes: list[torch.Tensor]
 
     # List of edges (if requested).
     # Tensor of shape (num_edges, 2) where vertices are represented by their hashes.
@@ -45,15 +45,6 @@ class BfsResult:
             return False
         for k in self.layers:
             if not torch.all(self.layers[k] == other.layers[k]):
-                return False
-
-        if not self.has_vertices_hashes():
-            if other.has_vertices_hashes():
-                return False
-        else:
-            if self.vertices_hashes.shape != other.vertices_hashes.shape:  # type: ignore
-                return False
-            if not torch.all(self.vertices_hashes == other.vertices_hashes):  # type: ignore
                 return False
 
         if not self.has_edges_list_hashes():
@@ -79,11 +70,6 @@ class BfsResult:
             for name, layer in self.layers.items():
                 f[f"layer__{name}"] = layer.detach().cpu()
 
-            if self.has_vertices_hashes():
-                f["vertices_hashes"] = self.vertices_hashes.detach().cpu()  # type: ignore
-            else:
-                f["vertices_hashes"] = torch.empty([])
-
             if self.has_edges_list_hashes():
                 f["edges_list_hashes"] = self.edges_list_hashes.detach().cpu()  # type: ignore
             else:
@@ -102,11 +88,6 @@ class BfsResult:
 
             layer_sizes = f["layer_sizes"][()].tolist()
 
-            if f["vertices_hashes"].shape == tuple():
-                vertices_hashes = None
-            else:
-                vertices_hashes = f["vertices_hashes"][()]
-
             if f["edges_list_hashes"].shape == tuple():
                 edges_list_hashes = None
             else:
@@ -117,7 +98,7 @@ class BfsResult:
                 layer_sizes=layer_sizes,
                 layers={x: f[f"layer__{str(x)}"][()] for x in range(len(layer_sizes))},
                 edges_list_hashes=edges_list_hashes,
-                vertices_hashes=vertices_hashes,
+                layers_hashes=[],
                 graph=CayleyGraphDef.create(
                     generators=f["graph__generators"][()].tolist(),
                     generator_names=[x.decode("utf-8") for x in f["graph__generator_names"][()]],
@@ -144,9 +125,6 @@ class BfsResult:
         """Returns last layer, formatted as set of strings."""
         return self.get_layer(self.diameter())
 
-    def has_vertices_hashes(self):
-        return hasattr(self, "vertices_hashes") and self.vertices_hashes is not None
-
     def has_edges_list_hashes(self):
         return hasattr(self, "edges_list_hashes") and self.edges_list_hashes is not None
 
@@ -158,7 +136,6 @@ class BfsResult:
         return replace(
             self,
             layers={k: v.to(device) for k, v in self.layers.items()},
-            vertices_hashes=self.vertices_hashes.to(device) if self.has_vertices_hashes() else None,  # type: ignore
             edges_list_hashes=self.edges_list_hashes.to(device) if self.has_edges_list_hashes() else None,  # type: ignore # pylint: disable=line-too-long
         )
 
@@ -171,12 +148,15 @@ class BfsResult:
     def hashes_to_indices_dict(self) -> dict[int, int]:
         """Dictionary used to remap vertex hashes to indexes."""
         n = self.num_vertices
-        assert self.vertices_hashes is not None, "Run bfs with return_all_hashes=True."
-        assert len(self.vertices_hashes) == n, "Number of vertices hashes must be the same as the number of veritces"
+        assert len(self.layers_hashes) == len(self.layers), "Run bfs with return_all_hashes=True."
         ans: dict[int, int] = {}
 
-        for i in range(n):
-            ans[int(self.vertices_hashes[i])] = i
+        ctr = 0
+        for layer_id, layer_hashes in enumerate(self.layers_hashes):
+            assert len(layer_hashes) == self.layer_sizes[layer_id]
+            for j in range(len(layer_hashes)):
+                ans[int(layer_hashes[j])] = ctr
+                ctr += 1
         assert len(ans) == n, "Hash collision."
         return ans
 
@@ -269,14 +249,3 @@ class BfsResult:
 
     def __repr__(self):
         return f"BfsResult(diameter={self.diameter()}, layer_sizes={self.layer_sizes})"
-
-    @cached_property
-    def layers_hashes(self) -> list[torch.Tensor]:
-        """Returns sorted hashes of each layer (without making copies)."""
-        assert self.vertices_hashes is not None, "Run bfs with return_all_hashes=True."
-        hashes = []
-        i = 0
-        for layer_size in self.layer_sizes:
-            hashes.append(self.vertices_hashes[i : i + layer_size])
-            i += layer_size
-        return hashes
