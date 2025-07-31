@@ -8,17 +8,17 @@ from .permutation_utils import apply_permutation
 from .string_encoder import StringEncoder
 
 
-@pytest.mark.parametrize("code_width,n", [(1, 2), (1, 5), (2, 30), (10, 100)])
+@pytest.mark.parametrize("code_width,n", [(1, 2), (1, 5), (2, 30), (10, 100), (4, 16), (1, 64)])
 def test_encode_decode(code_width, n):
     num_states = 5
     s = torch.randint(0, 2**code_width, (num_states, n))
     enc = StringEncoder(code_width=code_width, n=n)
     s_encoded = enc.encode(s)
-    assert s_encoded.shape == (num_states, int(math.ceil(code_width * n / 63)))
+    assert s_encoded.shape == (num_states, int(math.ceil(code_width * n / 64)))
     assert torch.equal(s, enc.decode(s_encoded))
 
 
-@pytest.mark.parametrize("code_width,n", [(1, 2), (1, 5), (2, 30), (10, 100)])
+@pytest.mark.parametrize("code_width,n", [(1, 2), (1, 5), (2, 30), (10, 100), (4, 16), (1, 64)])
 def test_permutation(code_width: int, n: int):
     num_states = 5
     s = torch.randint(0, 2**code_width, (num_states, n), dtype=torch.int64)
@@ -33,7 +33,7 @@ def test_permutation(code_width: int, n: int):
     assert torch.equal(ans, expected)
 
 
-@pytest.mark.parametrize("code_width,n", [(1, 2), (1, 5), (2, 30)])
+@pytest.mark.parametrize("code_width,n", [(1, 2), (1, 5), (2, 30), (4, 16), (1, 64)])
 def test_permutation_1d(code_width: int, n: int):
     num_states = 5
     s = torch.randint(0, 2**code_width, (num_states, n), dtype=torch.int64)

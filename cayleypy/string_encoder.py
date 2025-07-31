@@ -99,7 +99,7 @@ class StringEncoder:
                 line += f"<<{shift}"
             elif shift < 0:
                 line += f">>{-shift}"
-                if self.uses_sign_bit:
+                if mask < 0:
                     line += f"&{_mask_with_high_zeros(-shift)}"
             lines.append(line)
         src = "\n".join(lines)
@@ -122,7 +122,7 @@ class StringEncoder:
                 term += f"<<{shift}"
             elif shift < 0:
                 term += f">>{-shift}"
-                if self.uses_sign_bit:
+                if mask < 0:
                     term += f"&{_mask_with_high_zeros(-shift)}"
             terms.append(f"({term})")
         src = "f_ = lambda x: " + " | ".join(terms)
