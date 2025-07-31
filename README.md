@@ -1,12 +1,12 @@
 # CaleyPy
 
-AI-based libarary to work with google-size graphs.
+AI-based libarary to work with googol-size graphs.
 Supporting:  Cayley graphs, Schreier coset graphs, more to be added.
 
 
 ## Overview
 
-Exteremely large graphs (e.g. google size) cannot be approached in a usual way,
+Exteremely large graphs (e.g. googol size) cannot be approached in a usual way,
 it is impossible neither to create, neither to store them by standard methods.
 
 Typically such graphs arise as state-transition graphs.
