@@ -378,12 +378,10 @@ class PermutationGroups:
         return CayleyGraphDef.create(generators, central_state=list(range(n)), generator_names=generator_names)
 
 
-def prepare_graph(name: str, n: int = 0) -> CayleyGraphDef:
-    """Returns pre-defined graph by codename.
+def prepare_graph(name: str, n: int = 0, **unused_kwargs) -> CayleyGraphDef:
+    """Returns pre-defined CayleyGraphDef by codename and additional kwargs.
 
-    This function exists for convenience.
-    Do not add new graphs here unless this is necessary!
-    If you add a graph here, it must be one line calling a function defined elsewhere.
+    See the source of this function for list of supported graphs.
     """
     if name == "cube_2/2/2_6gensQTM":
         return Puzzles.rubik_cube(2, "fixed_QTM")
@@ -406,6 +404,10 @@ def prepare_graph(name: str, n: int = 0) -> CayleyGraphDef:
         return Puzzles.starminx_2()
     elif name == "megaminx":
         return Puzzles.megaminx()
+    elif name == "lx":
+        return PermutationGroups.lx(n)
+    elif name.startswith("lx-"):
+        return PermutationGroups.lrx(int(name[3:]))
     elif name == "lrx":
         return PermutationGroups.lrx(n)
     elif name.startswith("lrx-"):

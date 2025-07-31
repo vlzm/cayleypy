@@ -2,8 +2,8 @@ CayleyPy API Reference
 ======================
 
 
-Core classes
-''''''''''''''''
+Core classes and functions
+''''''''''''''''''''''''''
 
 .. toctree::
    :maxdepth: 1
@@ -14,6 +14,7 @@ Core classes
     cayleypy.CayleyGraphDef
     cayleypy.CayleyGraph
     cayleypy.BfsResult
+    cayleypy.find_path
 
 Graphs library
 ''''''''''''''
@@ -25,6 +26,8 @@ Graphs library
     cayleypy.MatrixGroups
     cayleypy.Puzzles
     cayleypy.GapPuzzles
+    cayleypy.create_graph
+    cayleypy.prepare_graph
 
 Beam search and ML
 ''''''''''''''''''
