@@ -8,6 +8,8 @@ import torch
 
 from .permutation_utils import inverse_permutation
 
+AnyStateType = Union[torch.Tensor, np.ndarray, list]
+
 
 class GeneratorType(Enum):
     """Type of generators for Cayley graph."""
@@ -106,7 +108,7 @@ class CayleyGraphDef:
     def create(
         generators: Union[list[list[int]], torch.Tensor, np.ndarray],
         generator_names: Optional[list[str]] = None,
-        central_state: Union[list[int], torch.Tensor, np.ndarray, str, None] = None,
+        central_state: Optional[AnyStateType] = None,
         name: str = "",
     ):
         """Creates Cayley Graph definition (when generators are permutations).
@@ -150,7 +152,7 @@ class CayleyGraphDef:
         *,
         generators: list[MatrixGenerator],
         generator_names: Optional[list[str]] = None,
-        central_state: Union[np.ndarray, list[list[int]], list[int], None] = None,
+        central_state: Optional[AnyStateType] = None,
         name: str = "",
     ):
         """Creates Cayley Graph definition (when generators are matrices).
@@ -306,10 +308,14 @@ class CayleyGraphDef:
                 if tuple(inv_perm) not in generators_set:
                     new_generators.append(inv_perm)
                     new_generator_names.append(self.generator_names[i] + "'")
+            new_name = self.name
+            if new_name != "":
+                new_name += "_inverse_closed"
             return CayleyGraphDef.create(
                 generators=self.generators_permutations + new_generators,
                 generator_names=self.generator_names + new_generator_names,
                 central_state=self.central_state,
+                name=new_name,
             )
         else:
             assert False, "Not implemented."
