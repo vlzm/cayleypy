@@ -1,8 +1,7 @@
 """Beam search algorithm for Cayley graphs."""
 
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Optional
 
-import numpy as np
 import torch
 
 from ..beam_search_result import BeamSearchResult
