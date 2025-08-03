@@ -363,7 +363,7 @@ class CayleyGraph:
 
     def beam_search(self, **kwargs):
         """Tries to find a path from `start_state` to central state using Beam Search algorithm.
-        
+
         See :class:`cayleypy.algo.BeamSearchAlgorithm` for more details.
         """
         return BeamSearchAlgorithm(self).search(**kwargs)

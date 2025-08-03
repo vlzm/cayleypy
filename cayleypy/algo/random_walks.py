@@ -108,9 +108,7 @@ class RandomWalksGenerator:
 
         return self.graph.decode_states(x), y
 
-    def random_walks_bfs(
-        self, width: int, length: int, start_state: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    def random_walks_bfs(self, width: int, length: int, start_state: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """Generate BFS-based random walks.
 
         :param width: Maximum number of states per layer
