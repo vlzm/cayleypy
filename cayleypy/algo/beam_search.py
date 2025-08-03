@@ -13,8 +13,6 @@ from ..torch_utils import isin_via_searchsorted
 if TYPE_CHECKING:
     from ..cayley_graph import CayleyGraph
 
-# pylint: disable=protected-access
-
 
 class BeamSearchAlgorithm:
     """Beam search algorithm for finding paths in Cayley graphs.
@@ -63,7 +61,7 @@ class BeamSearchAlgorithm:
             predictor = Predictor(self.graph, "hamming")
 
         start_states = self.graph.encode_states(start_state)
-        layer1, layer1_hashes = self.graph._get_unique_states(start_states)
+        layer1, layer1_hashes = self.graph.get_unique_states(start_states)
         all_layers_hashes = [layer1_hashes]
         debug_scores = {}  # type: dict[int, float]
 
@@ -100,7 +98,7 @@ class BeamSearchAlgorithm:
 
         for i in range(max_iterations):
             # Create states on the next layer.
-            layer2, layer2_hashes = self.graph._get_unique_states(self.graph.get_neighbors(layer1))
+            layer2, layer2_hashes = self.graph.get_unique_states(self.graph.get_neighbors(layer1))
 
             bfs_layer_id = _check_path_found(layer2_hashes)
             if bfs_layer_id != -1:

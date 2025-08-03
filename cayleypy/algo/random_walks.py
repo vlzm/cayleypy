@@ -10,8 +10,6 @@ from ..torch_utils import TorchHashSet
 if TYPE_CHECKING:
     from ..cayley_graph import CayleyGraph
 
-# pylint: disable=protected-access
-
 
 class RandomWalksGenerator:
     """Generator for random walks on Cayley graphs.
@@ -105,7 +103,7 @@ class RandomWalksGenerator:
                 mask = gen_idx == j
                 prev_states = src[mask, :]
                 next_states = torch.zeros_like(prev_states)
-                self.graph._apply_generator_batched(j, prev_states, next_states)
+                self.graph.apply_generator_batched(j, prev_states, next_states)
                 dst[mask, :] = next_states
 
         return self.graph.decode_states(x), y
@@ -125,7 +123,7 @@ class RandomWalksGenerator:
 
         for i_step in range(1, length):
             next_states = self.graph.get_neighbors(x[-1])
-            next_states, next_states_hashes = self.graph._get_unique_states(next_states)
+            next_states, next_states_hashes = self.graph.get_unique_states(next_states)
             mask = x_hashes.get_mask_to_remove_seen_hashes(next_states_hashes)
             next_states, next_states_hashes = next_states[mask], next_states_hashes[mask]
             layer_size = len(next_states)

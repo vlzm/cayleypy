@@ -109,7 +109,7 @@ class CayleyGraph:
         self.hasher = StateHasher(self, random_seed, chunk_size=hash_chunk_size)
         self.central_state_hash = self.hasher.make_hashes(self.encode_states(self.central_state))
 
-    def _get_unique_states(
+    def get_unique_states(
         self, states: torch.Tensor, hashes: Optional[torch.Tensor] = None
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """Removes duplicates from `states` and sorts them by hash."""
@@ -146,7 +146,7 @@ class CayleyGraph:
             return self.string_encoder.decode(states)
         return states
 
-    def _apply_generator_batched(self, i: int, src: torch.Tensor, dst: torch.Tensor):
+    def apply_generator_batched(self, i: int, src: torch.Tensor, dst: torch.Tensor):
         """Applies i-th generator to encoded states in `src`, writes output to `dst`."""
         states_num = src.shape[0]
         if self.definition.is_permutation_group():
@@ -173,7 +173,7 @@ class CayleyGraph:
         for gen_id in generator_ids:
             assert 0 <= gen_id < self.definition.n_generators
             new_states = torch.zeros_like(states)
-            self._apply_generator_batched(gen_id, states, new_states)
+            self.apply_generator_batched(gen_id, states, new_states)
             states = new_states
         return self.decode_states(states)
 
@@ -190,7 +190,7 @@ class CayleyGraph:
         )
         for i in range(self.definition.n_generators):
             dst = neighbors[i * states_num : (i + 1) * states_num, :]
-            self._apply_generator_batched(i, states, dst)
+            self.apply_generator_batched(i, states, dst)
         return neighbors
 
     def get_neighbors_decoded(self, states: torch.Tensor) -> torch.Tensor:
@@ -240,7 +240,7 @@ class CayleyGraph:
         if start_states is None:
             start_states = self.central_state
         start_states = self.encode_states(start_states)
-        layer1, layer1_hashes = self._get_unique_states(start_states)
+        layer1, layer1_hashes = self.get_unique_states(start_states)
         layer_sizes = [len(layer1)]
         layers = {0: self.decode_states(layer1)}
         full_graph_explored = False
@@ -279,7 +279,7 @@ class CayleyGraph:
                 layer2_hashes_batches = []  # type: list[torch.Tensor]
                 for layer1_batch in layer1.tensor_split(num_batches, dim=0):
                     layer2_batch = self.get_neighbors(layer1_batch)
-                    layer2_batch, layer2_hashes_batch = self._get_unique_states(layer2_batch)
+                    layer2_batch, layer2_hashes_batch = self.get_unique_states(layer2_batch)
                     mask = _remove_seen_states(layer2_hashes_batch)
                     for other_batch_hashes in layer2_hashes_batches:
                         mask &= ~isin_via_searchsorted(layer2_hashes_batch, other_batch_hashes)
@@ -296,7 +296,7 @@ class CayleyGraph:
                     edges_list_starts += [layer1_hashes.repeat(self.definition.n_generators)]
                     edges_list_ends.append(layer1_neighbors_hashes)
 
-                layer2, layer2_hashes = self._get_unique_states(layer1_neighbors, hashes=layer1_neighbors_hashes)
+                layer2, layer2_hashes = self.get_unique_states(layer1_neighbors, hashes=layer1_neighbors_hashes)
                 mask = _remove_seen_states(layer2_hashes)
                 layer2, layer2_hashes = _apply_mask(layer2, layer2_hashes, mask)
 
