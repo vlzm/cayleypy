@@ -5,6 +5,8 @@ from typing import Callable, Optional, Union
 import numpy as np
 import torch
 
+from .algo.beam_search import BeamSearchAlgorithm
+from .algo.random_walks import RandomWalksGenerator
 from .bfs_result import BfsResult
 from .cayley_graph_def import AnyStateType, CayleyGraphDef, GeneratorType
 from .hasher import StateHasher
@@ -354,18 +356,16 @@ class CayleyGraph:
 
     def random_walks(self, **kwargs):
         """Generates random walks on this graph.
-        See `RandomWalksGenerator.generate` for more details.
-        """
-        from .algo.random_walks import RandomWalksGenerator
 
+        See :class:`cayleypy.algo.RandomWalksGenerator` for more details.
+        """
         return RandomWalksGenerator(self).generate(**kwargs)
 
     def beam_search(self, **kwargs):
         """Tries to find a path from `start_state` to central state using Beam Search algorithm.
-        See `BeamSearchAlgorithm.search` for more details.
+        
+        See :class:`cayleypy.algo.BeamSearchAlgorithm` for more details.
         """
-        from .algo.beam_search import BeamSearchAlgorithm
-
         return BeamSearchAlgorithm(self).search(**kwargs)
 
     def restore_path(self, hashes: list[torch.Tensor], to_state: AnyStateType) -> list[int]:

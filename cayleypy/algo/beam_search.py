@@ -1,16 +1,18 @@
 """Beam search algorithm for Cayley graphs."""
 
-from typing import Optional, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 import numpy as np
 import torch
 
 from ..beam_search_result import BeamSearchResult
 from ..bfs_result import BfsResult
-from ..cayley_graph import CayleyGraph
 from ..cayley_graph_def import AnyStateType
 from ..predictor import Predictor
 from ..torch_utils import isin_via_searchsorted
+
+if TYPE_CHECKING:
+    from ..cayley_graph import CayleyGraph
 
 
 class BeamSearchAlgorithm:
@@ -21,7 +23,7 @@ class BeamSearchAlgorithm:
     guide the search and supports meet-in-the-middle optimization.
     """
 
-    def __init__(self, graph: CayleyGraph):
+    def __init__(self, graph: "CayleyGraph"):
         """Initialize the beam search algorithm.
 
         :param graph: The Cayley graph to search on

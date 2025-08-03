@@ -1,12 +1,14 @@
 """Random walks generation for Cayley graphs."""
 
-from typing import Union
+from typing import TYPE_CHECKING, Union
 
 import numpy as np
 import torch
 
-from ..cayley_graph import CayleyGraph
 from ..torch_utils import TorchHashSet
+
+if TYPE_CHECKING:
+    from ..cayley_graph import CayleyGraph
 
 
 class RandomWalksGenerator:
@@ -17,7 +19,7 @@ class RandomWalksGenerator:
     - "bfs": Breadth-first search based random walks with uniqueness constraints
     """
 
-    def __init__(self, graph: CayleyGraph):
+    def __init__(self, graph: "CayleyGraph"):
         """Initialize the random walks generator.
 
         :param graph: The Cayley graph to generate walks on
@@ -65,13 +67,13 @@ class RandomWalksGenerator:
         """
         start_state = self.graph.encode_states(start_state or self.graph.central_state)
         if mode == "classic":
-            return self._random_walks_classic(width, length, start_state)
+            return self.random_walks_classic(width, length, start_state)
         elif mode == "bfs":
-            return self._random_walks_bfs(width, length, start_state)
+            return self.random_walks_bfs(width, length, start_state)
         else:
             raise ValueError("Unknown mode:", mode)
 
-    def _random_walks_classic(
+    def random_walks_classic(
         self, width: int, length: int, start_state: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """Generate classic random walks.
@@ -106,7 +108,7 @@ class RandomWalksGenerator:
 
         return self.graph.decode_states(x), y
 
-    def _random_walks_bfs(
+    def random_walks_bfs(
         self, width: int, length: int, start_state: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """Generate BFS-based random walks.

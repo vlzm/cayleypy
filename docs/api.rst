@@ -41,6 +41,8 @@ Beam search and ML
     cayleypy.BeamSearchResult
     cayleypy.Predictor
     cayleypy.models.ModelConfig
+    cayleypy.algo.RandomWalksGenerator
+    cayleypy.algo.BeamSearchAlgorithm
 
 Special algorithms
 ''''''''''''''''''
@@ -52,5 +54,3 @@ Special algorithms
     cayleypy.algo.bfs_bitmask
     cayleypy.algo.bfs_numpy
     cayleypy.algo.find_path_bfs_mitm
-    cayleypy.algo.RandomWalksGenerator
-    cayleypy.algo.BeamSearchAlgorithm
