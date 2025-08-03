@@ -357,6 +357,7 @@ class CayleyGraph:
         See `RandomWalksGenerator.generate` for more details.
         """
         from .algo.random_walks import RandomWalksGenerator
+
         return RandomWalksGenerator(self).generate(**kwargs)
 
     def beam_search(self, **kwargs):
@@ -364,6 +365,7 @@ class CayleyGraph:
         See `BeamSearchAlgorithm.search` for more details.
         """
         from .algo.beam_search import BeamSearchAlgorithm
+
         return BeamSearchAlgorithm(self).search(**kwargs)
 
     def restore_path(self, hashes: list[torch.Tensor], to_state: AnyStateType) -> list[int]:

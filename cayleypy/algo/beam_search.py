@@ -15,15 +15,15 @@ from ..torch_utils import isin_via_searchsorted
 
 class BeamSearchAlgorithm:
     """Beam search algorithm for finding paths in Cayley graphs.
-    
+
     This class implements the beam search algorithm to find paths from a given start state
     to the central state of a Cayley graph. It can use various heuristics (predictors) to
     guide the search and supports meet-in-the-middle optimization.
     """
-    
+
     def __init__(self, graph: CayleyGraph):
         """Initialize the beam search algorithm.
-        
+
         :param graph: The Cayley graph to search on
         """
         self.graph = graph
@@ -31,7 +31,7 @@ class BeamSearchAlgorithm:
         self.definition = graph.definition
         self.central_state_hash = graph.central_state_hash
         self.verbose = graph.verbose
-    
+
     def search(
         self,
         *,
@@ -58,7 +58,7 @@ class BeamSearchAlgorithm:
         """
         if predictor is None:
             predictor = Predictor(self.graph, "hamming")
-        
+
         start_states = self.graph.encode_states(start_state)
         layer1, layer1_hashes = self.graph._get_unique_states(start_states)
         all_layers_hashes = [layer1_hashes]
@@ -122,4 +122,4 @@ class BeamSearchAlgorithm:
                 all_layers_hashes.append(layer1_hashes)
 
         # Path not found.
-        return BeamSearchResult(False, 0, None, debug_scores, self.definition) 
+        return BeamSearchResult(False, 0, None, debug_scores, self.definition)

@@ -11,22 +11,22 @@ from ..torch_utils import TorchHashSet
 
 class RandomWalksGenerator:
     """Generator for random walks on Cayley graphs.
-    
+
     This class encapsulates the logic for generating random walks using different modes:
     - "classic": Simple random walks with independent steps
     - "bfs": Breadth-first search based random walks with uniqueness constraints
     """
-    
+
     def __init__(self, graph: CayleyGraph):
         """Initialize the random walks generator.
-        
+
         :param graph: The Cayley graph to generate walks on
         """
         self.graph = graph
         self.device = graph.device
         self.definition = graph.definition
         self.hasher = graph.hasher
-    
+
     def generate(
         self,
         *,
@@ -70,12 +70,12 @@ class RandomWalksGenerator:
             return self._random_walks_bfs(width, length, start_state)
         else:
             raise ValueError("Unknown mode:", mode)
-    
+
     def _random_walks_classic(
         self, width: int, length: int, start_state: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """Generate classic random walks.
-        
+
         :param width: Number of random walks to generate
         :param length: Length of each random walk
         :param start_state: Starting state for all walks
@@ -110,7 +110,7 @@ class RandomWalksGenerator:
         self, width: int, length: int, start_state: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """Generate BFS-based random walks.
-        
+
         :param width: Maximum number of states per layer
         :param length: Maximum number of layers
         :param start_state: Starting state for the BFS
@@ -137,4 +137,4 @@ class RandomWalksGenerator:
             x.append(next_states)
             x_hashes.add_sorted_hashes(next_states_hashes)
             y.append(torch.full((layer_size,), i_step, device=self.device, dtype=torch.int32))
-        return self.graph.decode_states(torch.vstack(x)), torch.hstack(y) 
+        return self.graph.decode_states(torch.vstack(x)), torch.hstack(y)
