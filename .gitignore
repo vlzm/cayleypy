@@ -1,7 +1,7 @@
 __pycache__/
 .idea/
 .ipynb_checkpoints/
-*.ipynb
+notebooks_private/*.ipynb
 .coverage
 *.egg-info
 build/

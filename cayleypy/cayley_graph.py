@@ -5,13 +5,13 @@ from typing import Callable, Optional, Union
 import numpy as np
 import torch
 
-from .beam_search_result import BeamSearchResult
 from .bfs_result import BfsResult
 from .cayley_graph_def import AnyStateType, CayleyGraphDef, GeneratorType
 from .hasher import StateHasher
-from .predictor import Predictor
+
+
 from .string_encoder import StringEncoder
-from .torch_utils import isin_via_searchsorted, TorchHashSet
+from .torch_utils import isin_via_searchsorted
 
 
 class CayleyGraph:
@@ -352,194 +352,19 @@ class CayleyGraph:
             graph=self.definition,
         )
 
-    def _random_walks_classic(
-        self, width: int, length: int, start_state: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor]:
-        # Allocate memory.
-        x_shape = (width * length, self.encoded_state_size)
-        x = torch.zeros(x_shape, device=self.device, dtype=torch.int64)
-        y = torch.zeros(width * length, device=self.device, dtype=torch.int32)
-
-        # First state in each walk is the start state.
-        x[:width, :] = start_state.reshape((-1,))
-        y[:width] = 0
-
-        # Main loop.
-        for i_step in range(1, length):
-            y[i_step * width : (i_step + 1) * width] = i_step
-            gen_idx = torch.randint(0, self.definition.n_generators, (width,), device=self.device)
-            src = x[(i_step - 1) * width : i_step * width, :]
-            dst = x[i_step * width : (i_step + 1) * width, :]
-            for j in range(self.definition.n_generators):
-                # Go to next state for walks where we chose to use j-th generator on this step.
-                mask = gen_idx == j
-                prev_states = src[mask, :]
-                next_states = torch.zeros_like(prev_states)
-                self._apply_generator_batched(j, prev_states, next_states)
-                dst[mask, :] = next_states
-
-        return self.decode_states(x), y
-
-    def _random_walks_bfs(
-        self, width: int, length: int, start_state: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor]:
-        x_hashes = TorchHashSet()
-        x_hashes.add_sorted_hashes(self.hasher.make_hashes(start_state))
-        x = [start_state]
-        y = [torch.full((1,), 0, device=self.device, dtype=torch.int32)]
-
-        for i_step in range(1, length):
-            next_states = self.get_neighbors(x[-1])
-            next_states, next_states_hashes = self._get_unique_states(next_states)
-            mask = x_hashes.get_mask_to_remove_seen_hashes(next_states_hashes)
-            next_states, next_states_hashes = next_states[mask], next_states_hashes[mask]
-            layer_size = len(next_states)
-            if layer_size == 0:
-                break
-            if layer_size > width:
-                random_indices = torch.randperm(layer_size)[:width]
-                layer_size = width
-                next_states = next_states[random_indices]
-                next_states_hashes = next_states_hashes[random_indices]
-            x.append(next_states)
-            x_hashes.add_sorted_hashes(next_states_hashes)
-            y.append(torch.full((layer_size,), i_step, device=self.device, dtype=torch.int32))
-        return self.decode_states(torch.vstack(x)), torch.hstack(y)
-
-    def random_walks(
-        self,
-        *,
-        width=5,
-        length=10,
-        mode="classic",
-        start_state: Union[None, torch.Tensor, np.ndarray, list] = None,
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    def random_walks(self, **kwargs):
         """Generates random walks on this graph.
-
-        The following modes of random walk generation are supported:
-
-          * "classic" - random walk is a path in this graph starting from `start_state`, where on each step the next
-            edge is chosen randomly with equal probability. We generate `width` such random walks independently.
-            The output will have exactly ``width*length`` states.
-            i-th random walk can be extracted as: ``[x[i+j*width] for j in range(length)]``.
-            ``y[i]`` is equal to number of random steps it took to get to state ``x[i]``.
-            Note that in this mode a lot of states will have overestimated distance (meaning ``y[i]`` may be larger than
-            the length of the shortest path from ``x[i]`` to `start_state`).
-            The same state may appear multiple times with different distance in ``y``.
-          * "bfs" - we perform Breadth First Search starting from ``start_state`` with one modification: if size of
-            next layer is larger than ``width``, only ``width`` states (chosen randomly) will be kept.
-            We also remove states from current layer if they appeared on some previous layer (so this also can be
-            called "non-backtracking random walk").
-            All states in the output are unique. ``y`` still can be overestimated, but it will be closer to the true
-            distance than in "classic" mode. Size of output is ``<= width*length``.
-            If ``width`` and ``length`` are large enough (``width`` at least as large as largest BFS layer, and
-            ``length >= diameter``), this will return all states and true distances to the start state.
-
-        :param width: Number of random walks to generate.
-        :param length: Length of each random walk.
-        :param start_state: State from which to start random walk. Defaults to the central state.
-        :param mode: Type of random walk (see above). Defaults to "classic".
-        :return: Pair of tensors ``x, y``. ``x`` contains states. ``y[i]`` is the estimated distance from start state
-          to state ``x[i]``.
+        See `RandomWalksGenerator.generate` for more details.
         """
-        start_state = self.encode_states(start_state or self.central_state)
-        if mode == "classic":
-            return self._random_walks_classic(width, length, start_state)
-        elif mode == "bfs":
-            return self._random_walks_bfs(width, length, start_state)
-        else:
-            raise ValueError("Unknown mode:", mode)
+        from .algo.random_walks import RandomWalksGenerator
+        return RandomWalksGenerator(self).generate(**kwargs)
 
-    def beam_search(
-        self,
-        *,
-        start_state: AnyStateType,
-        predictor: Optional[Predictor] = None,
-        beam_width=1000,
-        max_iterations=1000,
-        return_path=False,
-        bfs_result_for_mitm: Optional[BfsResult] = None,
-    ) -> BeamSearchResult:
+    def beam_search(self, **kwargs):
         """Tries to find a path from `start_state` to central state using Beam Search algorithm.
-
-        :param start_state: State from which to star search.
-        :param predictor: A heuristic that estimates scores for states (lower score = closer to center).
-          Defaults to Hamming distance heuristic.
-        :param beam_width: Width of the beam (how many "best" states we consider at each step".
-        :param max_iterations: Maximum number of iterations before giving up.
-        :param return_path: Whether to return parth (consumes much more memory if True).
-        :param bfs_result_for_mitm: BfsResult with pre-computed neighborhood of central state to compute for
-            meet-in-the-middle modification of Beam Search. Beam search will terminate when any of states in that
-            neighborhood is encountered. Defaults to None, which means no meet-in-the-middle (i.e. only search for the
-            central state).
-        :return: BeamSearchResult containing found path length and (optionally) the path itself.
+        See `BeamSearchAlgorithm.search` for more details.
         """
-        if predictor is None:
-            predictor = Predictor(self, "hamming")
-        start_states = self.encode_states(start_state)
-        layer1, layer1_hashes = self._get_unique_states(start_states)
-        all_layers_hashes = [layer1_hashes]
-        debug_scores = {}  # type: dict[int, float]
-
-        if self.central_state_hash[0] == layer1_hashes[0]:
-            # Start state is the central state.
-            return BeamSearchResult(True, 0, [], debug_scores, self.definition)
-
-        bfs_layers_hashes = [self.central_state_hash]
-        if bfs_result_for_mitm is not None:
-            assert bfs_result_for_mitm.graph == self.definition
-            bfs_layers_hashes = bfs_result_for_mitm.layers_hashes
-
-        # Checks if any of `hashes` are in neighborhood of the central state.
-        # Returns the number of the first layer where intersection was found, or -1 if not found.
-        def _check_path_found(hashes):
-            for j, layer in enumerate(bfs_layers_hashes):
-                if torch.any(isin_via_searchsorted(layer, hashes)):
-                    return j
-            return -1
-
-        def _restore_path(found_layer_id: int) -> Optional[list[int]]:
-            if not return_path:
-                return None
-            if found_layer_id == 0:
-                return self.restore_path(all_layers_hashes, self.central_state)
-            assert bfs_result_for_mitm is not None
-            mask = isin_via_searchsorted(layer2_hashes, bfs_layers_hashes[found_layer_id])
-            assert torch.any(mask), "No intersection in Meet-in-the-middle"
-            middle_state = self.decode_states(layer2[mask.nonzero()[0].item()].reshape((1, -1)))
-            path1 = self.restore_path(all_layers_hashes, middle_state)
-            path2 = self.find_path_from(middle_state, bfs_result_for_mitm)
-            assert path2 is not None
-            return path1 + path2
-
-        for i in range(max_iterations):
-            # Create states on the next layer.
-            layer2, layer2_hashes = self._get_unique_states(self.get_neighbors(layer1))
-
-            bfs_layer_id = _check_path_found(layer2_hashes)
-            if bfs_layer_id != -1:
-                # Path found.
-                path = _restore_path(bfs_layer_id)
-                return BeamSearchResult(True, i + bfs_layer_id + 1, path, debug_scores, self.definition)
-
-            # Pick `beam_width` states with lowest scores.
-            if len(layer2) >= beam_width:
-                scores = predictor(self.decode_states(layer2))
-                idx = torch.argsort(scores)[:beam_width]
-                layer2 = layer2[idx, :]
-                layer2_hashes = layer2_hashes[idx]
-                best_score = float(scores[idx[0]])
-                debug_scores[i] = best_score
-                if self.verbose >= 2:
-                    print(f"Iteration {i}, best score {best_score}.")
-
-            layer1 = layer2
-            layer1_hashes = layer2_hashes
-            if return_path:
-                all_layers_hashes.append(layer1_hashes)
-
-        # Path not found.
-        return BeamSearchResult(False, 0, None, debug_scores, self.definition)
+        from .algo.beam_search import BeamSearchAlgorithm
+        return BeamSearchAlgorithm(self).search(**kwargs)
 
     def restore_path(self, hashes: list[torch.Tensor], to_state: AnyStateType) -> list[int]:
         """Restores path from layers hashes.
